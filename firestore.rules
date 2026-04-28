@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // -------------------------------------------------------------------------
+    // GLOBAL HELPERS
+    // -------------------------------------------------------------------------
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function emailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && (
+        getUserData().role == 'admin' || 
+        request.auth.token.email == 'musaukulenga1@gmail.com'
+      );
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+    
+    // -------------------------------------------------------------------------
+    // VALIDATION HELPERS
+    // -------------------------------------------------------------------------
+    
+    function isValidUser(data) {
+      return data.email is string && 
+             data.role in ['admin', 'student'] &&
+             data.keys().hasAll(['email', 'role']);
+    }
+    
+    function isValidExam(data) {
+      return data.title is string && data.title.size() <= 200 &&
+             data.sessionId is string &&
+             data.keys().hasAll(['title', 'sessionId']);
+    }
+    
+    // -------------------------------------------------------------------------
+    // RULES
+    // -------------------------------------------------------------------------
+    
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn(); // Allow initial registration
+      allow update: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    match /sessions/{sessionId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    match /categories/{catId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    match /subcategories/{subId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    match /exams/{examId} {
+      allow read: if isSignedIn() && (
+        isAdmin() || 
+        (existing().status == 'published' && existing().sessionId == getUserData().sessionId)
+      );
+      allow write: if isAdmin();
+    }
+    
+    match /questions/{qId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    match /submissions/{subId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+  }
+}

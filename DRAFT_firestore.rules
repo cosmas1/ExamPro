@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 3. Primitives
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    function isSignedIn() { 
+      return request.auth != null && request.auth.token.email_verified == true; 
+    }
+    function isOwner(uid) { 
+      return isSignedIn() && request.auth.uid == uid; 
+    }
+    function isAdmin() { 
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'musaukulenga1@gmail.com'
+      );
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // --- Users ---
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && 
+        incoming().keys().hasAll(['uid', 'name', 'email', 'role', 'createdAt']) && 
+        incoming().uid == userId && 
+        incoming().role in ['student', 'admin'];
+      allow update: if isOwner(userId) && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['name']) &&
+        incoming().uid == existing().uid &&
+        incoming().role == existing().role;
+    }
+    
+    // Admin list for RBAC
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+    }
+
+    // --- Exams ---
+    match /exams/{examId} {
+      allow get: if isSignedIn(); // Students need to see details to take the exam
+      allow list: if isSignedIn(); // Students browse exams
+      allow create: if isAdmin() && 
+        incoming().createdBy == request.auth.uid &&
+        incoming().status == 'draft';
+      allow update: if isAdmin() && 
+        incoming().createdBy == existing().createdBy;
+      allow delete: if isAdmin() && 
+        existing().createdBy == request.auth.uid;
+
+      // --- Questions ---
+      match /questions/{questionId} {
+        // Students can only read questions if the exam is published
+        allow list, get: if isSignedIn() && (
+          isAdmin() || 
+          get(/databases/$(database)/documents/exams/$(examId)).data.status == 'published'
+        );
+        allow create, update, delete: if isAdmin();
+      }
+    }
+
+    // --- Submissions ---
+    match /submissions/{submissionId} {
+      allow get: if isOwner(existing().studentId) || isAdmin();
+      allow list: if (isSignedIn() && resource.data.studentId == request.auth.uid) || isAdmin();
+      
+      function isValidSubmission(data) {
+        return data.keys().hasAll(['examId', 'studentId', 'status', 'startTime']) &&
+               data.studentId == request.auth.uid &&
+               data.examId is string;
+      }
+
+      allow create: if isSignedIn() && 
+        isValidSubmission(incoming()) && 
+        incoming().status == 'in-progress' &&
+        exists(/databases/$(database)/documents/exams/$(incoming().examId));
+
+      allow update: if isSignedIn() && (
+        // Action: Submit answers
+        (isOwner(existing().studentId) && 
+         existing().status == 'in-progress' &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['answers', 'status', 'endTime', 'score', 'totalMarks']) &&
+         (incoming().status == 'completed' || incoming().status == 'in-progress'))
+        || isAdmin()
+      );
+    }
+  }
+}

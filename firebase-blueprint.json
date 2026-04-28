@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user (Admin or Student)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "admissionNumber": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "student"] },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role"]
+    },
+    "Session": {
+      "title": "Session",
+      "description": "Academic session or class group",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Exam category (e.g. Science, Math)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "SubCategory": {
+      "title": "SubCategory",
+      "description": "Specific subject area",
+      "type": "object",
+      "properties": {
+        "categoryId": { "type": "string" },
+        "name": { "type": "string" },
+        "isFree": { "type": "boolean" },
+        "price": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["categoryId", "name"]
+    },
+    "Exam": {
+      "title": "Exam",
+      "description": "A collection of questions for a session",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "durationMinutes": { "type": "number" },
+        "instructions": { "type": "string" },
+        "status": { "type": "string" },
+        "isLive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" },
+        "totalQuestions": { "type": "number" },
+        "questionIds": { "type": "array" }
+      },
+      "required": ["title", "sessionId"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "Individual exam question",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "options": { "type": "array" },
+        "correctOption": { "type": "number" },
+        "categoryId": { "type": "string" },
+        "subCategoryId": { "type": "string" },
+        "type": { "type": "string" },
+        "difficulty": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      }
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "Student exam submission",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "examId": { "type": "string" },
+        "status": { "type": "string" },
+        "score": { "type": "number" },
+        "totalQuestions": { "type": "number" },
+        "answers": { "type": "object" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "users/{userId}": { "schema": "User", "description": "User profiles" },
+    "sessions/{sessionId}": { "schema": "Session", "description": "Academic groups" },
+    "categories/{categoryId}": { "schema": "Category", "description": "Subject categories" },
+    "subcategories/{subId}": { "schema": "SubCategory", "description": "Subject sub-categories" },
+    "exams/{examId}": { "schema": "Exam", "description": "Examination papers" },
+    "questions/{questionId}": { "schema": "Question", "description": "Question pool" },
+    "submissions/{submissionId}": { "schema": "Submission", "description": "Student attempt records" }
+  }
+}
