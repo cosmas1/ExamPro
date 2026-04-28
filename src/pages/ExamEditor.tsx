@@ -160,6 +160,43 @@ export default function ExamEditor() {
     }
   };
 
+  const [isBankOpen, setIsBankOpen] = useState(false);
+  const [bankQuestions, setBankQuestions] = useState<Question[]>([]);
+  const [selectedBankIds, setSelectedBankIds] = useState<Set<string>>(new Set());
+  const [bankSearch, setBankSearch] = useState('');
+
+  const openQuestionBank = async () => {
+    setIsBankOpen(true);
+    try {
+      const qSnap = await getDocs(collection(db, 'questions'));
+      setBankQuestions(qSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const addSelectedFromBank = () => {
+    const toAdd = bankQuestions.filter(q => selectedBankIds.has(q.id));
+    const newQs = [...questions];
+    
+    toAdd.forEach(bq => {
+      // Check if already in current questions to avoid duplicates if needed, but usually it's fine
+      const newQ: Question = {
+        ...bq,
+        id: Math.random().toString(36).substring(7), // New ID for the exam instance
+        examId: examId || '',
+        order: newQs.length + 1,
+        text: (bq as any).questionText || bq.text // Handle different naming if any
+      };
+      newQs.push(newQ);
+    });
+    
+    setQuestions(newQs);
+    setIsBankOpen(false);
+    setSelectedBankIds(new Set());
+    Swal.fire('Success', `${toAdd.length} questions added from bank`, 'success');
+  };
+
   if (loading) return <div className="p-10 text-center font-mono text-sm">INITIALIZING_EDITOR...</div>;
 
   const currentQ = questions[currentQuestionIndex];
@@ -293,13 +330,22 @@ export default function ExamEditor() {
             <div className="w-80 border-r border-slate-100 flex flex-col bg-slate-50/30">
               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
                 <span className="font-bold uppercase text-xs tracking-widest text-slate-500">Navigation</span>
-                <button 
-                  onClick={addQuestion}
-                  className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-all"
-                  title="Add Question"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={openQuestionBank}
+                    className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-all"
+                    title="Import from Question Bank"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={addQuestion}
+                    className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-all"
+                    title="Add New Question"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {questions.map((q, idx) => (
@@ -458,6 +504,88 @@ export default function ExamEditor() {
         )}
       </div>
     </div>
+      
+      {/* Question Bank Modal */}
+      {isBankOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsBankOpen(false)} />
+          <div className="relative bg-white w-full max-w-4xl max-h-[80vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">Question Bank</h2>
+                <p className="text-xs text-slate-400 font-medium uppercase tracking-widest mt-0.5">Select questions to add to this paper</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <LayoutGrid className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Search keywords..." 
+                    className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    value={bankSearch}
+                    onChange={(e) => setBankSearch(e.target.value)}
+                  />
+                </div>
+                <button onClick={() => setIsBankOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400">&times;</button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+              {bankQuestions
+                .filter(q => ((bq: any) => (bq.questionText || bq.text || '').toLowerCase().includes(bankSearch.toLowerCase()))(q))
+                .map(q => (
+                  <label 
+                    key={q.id} 
+                    className={cn(
+                      "flex items-start gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer group",
+                      selectedBankIds.has(q.id) ? "border-indigo-600 bg-indigo-50/30" : "border-slate-50 hover:bg-slate-50"
+                    )}
+                  >
+                    <input 
+                      type="checkbox" 
+                      className="mt-1 w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      checked={selectedBankIds.has(q.id)}
+                      onChange={() => {
+                        const next = new Set(selectedBankIds);
+                        if (next.has(q.id)) next.delete(q.id);
+                        else next.add(q.id);
+                        setSelectedBankIds(next);
+                      }}
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-black uppercase bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">{(q as any).type || 'MCQ'}</span>
+                        <span className="text-[10px] font-bold text-slate-400 italic">ID: {q.id}</span>
+                      </div>
+                      <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                        {(q as any).questionText || q.text}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+            </div>
+
+            <div className="p-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedBankIds.size} Selected</span>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setIsBankOpen(false)}
+                  className="px-6 py-2 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={addSelectedFromBank}
+                  disabled={selectedBankIds.size === 0}
+                  className="px-8 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50"
+                >
+                  Add Selected to Paper
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }

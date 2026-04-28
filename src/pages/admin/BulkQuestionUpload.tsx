@@ -55,6 +55,58 @@ export default function BulkQuestionUpload() {
     }
   };
 
+  const downloadSample = async () => {
+    try {
+      const { utils, write } = await import('xlsx');
+      
+      const wb = utils.book_new();
+      
+      // MCQ Sheet
+      const mcqData = [
+        ['Question Level', 'Question Details', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Option'],
+        ['Simple', 'What is the capital of France?', 'London', 'Paris', 'Berlin', 'Rome', 'Paris'],
+        ['Moderate', 'Which planet is known as the Red Planet?', 'Earth', 'Mars', 'Jupiter', 'Venus', 'Mars']
+      ];
+      utils.book_append_sheet(wb, utils.aoa_to_sheet(mcqData), 'mcq');
+
+      // True/False Sheet
+      const tfData = [
+        ['Question Level', 'Question Details', 'TRUE /FALSE'],
+        ['Simple', 'The Earth is flat.', 'F'],
+        ['Hard', 'Python is a compiled language.', 'F']
+      ];
+      utils.book_append_sheet(wb, utils.aoa_to_sheet(tfData), 'true_false');
+
+      // Short Answer Sheet
+      const saData = [
+        ['Question Level', 'Question Details', 'Possible Answer 1'],
+        ['Moderate', 'What is 2 + 2?', '4, four, Four'],
+        ['Simple', 'What is the opposite of hot?', 'cold, Cold']
+      ];
+      utils.book_append_sheet(wb, utils.aoa_to_sheet(saData), 'short_answer');
+
+      // Long Answer Sheet
+      const laData = [
+        ['Question Level', 'Question Details'],
+        ['Hard', 'Explain the process of photosynthesis.'],
+        ['Hard', 'Discuss the impact of AI on education.']
+      ];
+      utils.book_append_sheet(wb, utils.aoa_to_sheet(laData), 'long_answer');
+
+      const wbout = write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sample_questions.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      Swal.fire('Error', 'Failed to generate sample file', 'error');
+    }
+  };
+
   const handleUploadNow = async () => {
     if (!formData.categoryId || !formData.subCategoryId || !formData.file) {
       Swal.fire('Error', 'Please select category, subcategory and a file', 'error');
@@ -275,7 +327,10 @@ export default function BulkQuestionUpload() {
 
               {/* Download Sample Section */}
               <div className="space-y-4">
-                <button className="w-full bg-[#7029cb] hover:bg-[#5d1faf] text-white p-6 rounded flex items-center justify-between group transition-all shadow-md text-left">
+                <button 
+                  onClick={downloadSample}
+                  className="w-full bg-[#3c8dbc] hover:bg-[#367fa9] text-white p-6 rounded flex items-center justify-between group transition-all shadow-md text-left"
+                >
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-white/10 rounded-full group-hover:scale-110 transition-transform">
                       <Download className="w-6 h-6" />
