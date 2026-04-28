@@ -123,20 +123,8 @@ export default function Landing() {
               Secure <span className="text-blue-600">Assesment</span> Experience.
             </h1>
             <p className="text-xl text-slate-500 mb-12 leading-relaxed max-w-lg font-medium">
-              Enterprise-grade proctoring, real-time analytics, and session-based assignments for modern educational institutions.
+              Enterprise-grade proctoring, real-time analytics, and secure assessments for modern educational institutions.
             </p>
-            
-            <div className="flex gap-4 p-6 bg-white rounded-2xl border border-slate-200 shadow-sm mb-12 max-w-md">
-               <div className="flex-1">
-                  <p className="text-2xl font-bold text-slate-900 mb-1">99.9%</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Security Core</p>
-               </div>
-               <div className="w-px bg-slate-100 mx-2"></div>
-               <div className="flex-1 text-center">
-                  <p className="text-2xl font-bold text-blue-600 mb-1">S25/NA26</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Active Sessions</p>
-               </div>
-            </div>
           </motion.div>
 
           <motion.div 
