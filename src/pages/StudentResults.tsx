@@ -54,6 +54,8 @@ export default function StudentResults() {
           percentage: Math.round(((data.score || 0) / (data.totalPossibleScore || 1)) * 100),
         };
       }) as ExamResult[]);
+    }, (error) => {
+      console.error("Submissions snapshot error:", error);
     });
     return () => unsub();
   }, []);

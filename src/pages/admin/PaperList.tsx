@@ -6,7 +6,7 @@ import {
 import { db } from '../../firebase';
 import { Exam } from '../../types';
 import AdminLayout from '../../components/AdminLayout';
-import { Edit2, Trash2, Eye, Play, Pause, Search } from 'lucide-react';
+import { Edit2, Trash2, Eye, Play, Pause, Search, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import Swal from 'sweetalert2';
@@ -36,6 +36,9 @@ export default function PaperList() {
     const q = query(collection(db, 'exams'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setExams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Exam)));
+      setLoading(false);
+    }, (error) => {
+      console.error("Exams snapshot error:", error);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -166,6 +169,13 @@ export default function PaperList() {
                                <Play className={cn("w-3 h-3", exam.isLive && "fill-current")} />
                              </button>
                           )}
+                          <button 
+                            onClick={() => navigate(`/admin/papers/results/${exam.id}`)}
+                            className="bg-[#605ca8] hover:bg-[#555299] text-white p-2 rounded shadow-sm transition-all active:scale-95"
+                            title="View Results"
+                          >
+                            <BarChart3 className="w-3 h-3" />
+                          </button>
                           <button 
                             onClick={() => navigate(`/admin/exam/${exam.id}`)}
                             className="bg-[#00c0ef] hover:bg-[#00acd6] text-white p-2 rounded shadow-sm transition-all active:scale-95"

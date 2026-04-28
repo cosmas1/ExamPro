@@ -4,9 +4,10 @@ import { doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc,
 import { db } from '../firebase';
 import { Exam, Question, ExamStatus } from '../types';
 import { useAuth } from '../hooks/useAuth';
-import { ChevronLeft, Plus, Save, Trash2, CheckCircle2, AlertCircle, List, Settings, Info, Clock } from 'lucide-react';
+import { ChevronLeft, Plus, Save, Trash2, CheckCircle2, AlertCircle, List, Settings, Info, Clock, LayoutGrid } from 'lucide-react';
 import { cn } from '../lib/utils';
 import Swal from 'sweetalert2';
+import AdminLayout from '../components/AdminLayout';
 
 export default function ExamEditor() {
   const { examId } = useParams();
@@ -153,8 +154,9 @@ export default function ExamEditor() {
   const currentQ = questions[currentQuestionIndex];
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col pt-4">
-      <div className="max-w-7xl mx-auto w-full px-4 mb-4 flex items-center justify-between">
+    <AdminLayout activeMenu="Papers">
+      <div className="h-[calc(100vh-64px)] flex flex-col pt-0 bg-white">
+        <div className="max-w-7xl mx-auto w-full px-4 py-4 flex items-center justify-between border-b border-slate-100">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate('/admin')} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
             <ChevronLeft className="w-6 h-6" />
@@ -390,5 +392,6 @@ export default function ExamEditor() {
         )}
       </div>
     </div>
+    </AdminLayout>
   );
 }

@@ -44,7 +44,7 @@ export default function Navbar() {
                   >
                     Dashboard
                   </Link>
-                  {user?.role === 'admin' && (
+                  { (user?.role === 'admin' || user?.role === 'teacher') && (
                     <Link 
                       to="/admin" 
                       className={cn(

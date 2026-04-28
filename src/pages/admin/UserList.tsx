@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, onSnapshot, doc, deleteDoc, getDocs } from 'firebase/firestore';
-import { db, auth } from '../../firebase';
+import { db } from '../../firebase';
+import { useAuth } from '../../hooks/useAuth';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { AppUser as User } from '../../types';
 import AdminLayout from '../../components/AdminLayout';
@@ -13,6 +14,7 @@ interface Session {
 }
 
 export default function UserList() {
+  const { user: currentUser, signOut } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [sessions, setSessions] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -31,6 +33,9 @@ export default function UserList() {
     const q = query(collection(db, 'users'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setUsers(snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User)));
+      setLoading(false);
+    }, (error) => {
+      console.error("Users snapshot error:", error);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -54,6 +59,7 @@ export default function UserList() {
 
   const handleResetPassword = async (email: string) => {
     try {
+      const { auth } = await import('../../firebase');
       await sendPasswordResetEmail(auth, email);
       Swal.fire('Success', `Reset link sent to ${email}`, 'success');
     } catch (err: any) {
@@ -146,13 +152,15 @@ export default function UserList() {
                           >
                             <Key className="w-3 h-3" />
                           </button>
-                          <button 
-                            onClick={() => handleDelete(u.uid)}
-                            className="bg-red-500 hover:bg-red-600 text-white p-2 rounded shadow-sm transition-all active:scale-95"
-                            title="Delete User"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                          {currentUser?.role === 'admin' && (
+                            <button 
+                              onClick={() => handleDelete(u.uid)}
+                              className="bg-red-500 hover:bg-red-600 text-white p-2 rounded shadow-sm transition-all active:scale-95"
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

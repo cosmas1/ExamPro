@@ -10,11 +10,31 @@ import Swal from 'sweetalert2';
 import Navbar from '../components/Navbar';
 
 export default function Landing() {
-  const { signInWithGoogle, signInWithEmail } = useAuth();
+  const { signInWithGoogle, signInWithEmail, user, firebaseUser, loading } = useAuth();
   const navigate = useNavigate();
   const [userInput, setUserInput] = useState('');
   const [password, setPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  React.useEffect(() => {
+    if (!loading && firebaseUser && user) {
+      if (user.role === 'admin' || user.role === 'teacher') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [user, firebaseUser, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[#f8fafc] font-mono text-xs text-slate-400">
+        LOADING_SYSTEM_RESOURCES...
+      </div>
+    );
+  }
+
+  if (firebaseUser && user) return null;
 
   const handleGoogleLogin = async () => {
     if (isLoggingIn) return;
@@ -74,6 +94,10 @@ export default function Landing() {
       await signInWithEmail(email, password);
       
       // Get role for redirect
+      if (!email) {
+        throw new Error('User email not found in system records');
+      }
+      
       const q = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
       const snap = await getDocs(q);
       const role = snap.docs[0]?.data()?.role || 'student';

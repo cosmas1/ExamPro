@@ -48,7 +48,7 @@ export default function AddPaper() {
     }
 
     try {
-      await addDoc(collection(db, 'exams'), {
+      const newDoc = await addDoc(collection(db, 'exams'), {
         title: formData.title,
         durationMinutes: Number(formData.durationMinutes),
         instructions: formData.instructions,
@@ -60,8 +60,8 @@ export default function AddPaper() {
         totalQuestions: 0,
         settings: formData
       });
-      Swal.fire('Success', 'Paper created and assigned to session.', 'success');
-      navigate('/admin/papers');
+      Swal.fire('Success', 'Paper created! Now add your questions.', 'success');
+      navigate(`/admin/exam/${newDoc.id}`);
     } catch (error) {
       Swal.fire('Error', 'Failed to save paper.', 'error');
     }

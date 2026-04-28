@@ -9,7 +9,7 @@ export enum OperationType {
   WRITE = 'write',
 }
 
-interface FirestoreErrorInfo {
+export interface FirestoreErrorInfo {
   error: string;
   operationType: OperationType;
   path: string | null;
@@ -44,5 +44,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
+  // We throw a standardized error that our UI can potentially catch or the system can use for debugging
   throw new Error(JSON.stringify(errInfo));
 }

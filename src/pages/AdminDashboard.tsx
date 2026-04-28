@@ -21,6 +21,7 @@ export default function AdminDashboard() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [recentUsers, setRecentUsers] = useState<User[]>([]);
   const [submissionsCount, setSubmissionsCount] = useState({ total: 0, pass: 0, fail: 0 });
+  const [counts, setCounts] = useState({ users: 0, questions: 0, sessions: 0 });
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -33,34 +34,61 @@ export default function AdminDashboard() {
     const unsubscribeExams = onSnapshot(examsQuery, (snapshot) => {
       const examsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Exam));
       setExams(examsData);
+    }, (error) => {
+      console.error("Exams snapshot error:", error);
     });
 
-    // Fetch Recent Registered Users
-    const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(10));
-    getDocs(usersQuery).then(snapshot => {
-      setRecentUsers(snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as unknown as User)));
-    });
+    // Fetch counts and other data
+    const fetchData = async () => {
+      try {
+        // Total Users
+        const usersSnap = await getDocs(collection(db, 'users'));
+        const totalUsers = usersSnap.size;
 
-    // Fetch Submissions for summary
-    const submissionsQuery = query(collection(db, 'submissions'));
-    getDocs(submissionsQuery).then(snapshot => {
-      const subs = snapshot.docs.map(doc => doc.data() as Submission);
-      const total = subs.length;
-      const pass = subs.filter(s => (s.score || 0) >= (s.totalMarks * 0.5)).length;
-      setSubmissionsCount({ total, pass, fail: total - pass });
-      setLoading(false);
-    });
+        // Recent Users (Top 10)
+        const recentUsersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(10));
+        const recentSnap = await getDocs(recentUsersQuery);
+        setRecentUsers(recentSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as unknown as User)));
+
+        // Total Sessions
+        const sessionsSnap = await getDocs(collection(db, 'sessions'));
+        const totalSessions = sessionsSnap.size;
+
+        // Total Questions
+        const questionsSnap = await getDocs(collection(db, 'questions'));
+        const totalQuestions = questionsSnap.size;
+
+        setCounts({
+          users: totalUsers,
+          sessions: totalSessions,
+          questions: totalQuestions
+        });
+
+        // Submissions
+        const submissionsQuery = query(collection(db, 'submissions'));
+        const subSnap = await getDocs(submissionsQuery);
+        const subs = subSnap.docs.map(doc => doc.data() as Submission);
+        const total = subs.length;
+        const pass = subs.filter(s => (s.score || 0) >= (s.totalMarks * 0.5)).length;
+        setSubmissionsCount({ total, pass, fail: total - pass });
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Dashboard data fetch error:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
 
     return () => unsubscribeExams();
   }, [user]);
 
-  const totalQuestions = exams.reduce((acc, curr) => acc + (curr.totalQuestions || 0), 0);
-
   const stats = [
-    { title: 'Total papers on server', value: exams.length, icon: CheckSquare, color: 'bg-[#00c0ef]', sub: 'More info' },
-    { title: 'Total questions on server', value: totalQuestions, icon: Book, color: 'bg-[#f39c12]', sub: 'More info' },
-    { title: 'Total Users', value: recentUsers.length + 10, icon: Users, color: 'bg-[#00a65a]', sub: 'More info' }, 
-    { title: 'Total groups', value: 5, icon: Share2, color: 'bg-[#dd4b39]', sub: 'More info' },
+    { title: 'Total papers on server', value: exams.length, icon: CheckSquare, color: 'bg-[#00c0ef]', sub: 'More info', link: '/admin/papers' },
+    { title: 'Total questions on server', value: counts.questions, icon: Book, color: 'bg-[#f39c12]', sub: 'More info', link: '/admin/questions/bulk' },
+    { title: 'Total Users', value: counts.users, icon: Users, color: 'bg-[#00a65a]', sub: 'More info', link: '/admin/users' }, 
+    { title: 'Total sessions', value: counts.sessions, icon: Share2, color: 'bg-[#dd4b39]', sub: 'More info', link: '/admin/sessions' },
   ];
 
   const chartData = [
@@ -80,8 +108,12 @@ export default function AdminDashboard() {
     <AdminLayout activeMenu="Dashboard">
       <div className="bg-[#ecf0f5] px-4 py-3 flex items-center justify-between shrink-0 shadow-sm border-b border-white text-slate-700">
         <div className="flex items-center gap-2">
-          <h2 className="text-xl font-medium tracking-tight">System Dashboard</h2>
-          <span className="text-[11px] text-slate-400 mt-2 font-normal">Real-time statistics and system overview.</span>
+          <h2 className="text-xl font-medium tracking-tight">
+            {user?.role === 'teacher' ? 'Teacher Dashboard' : 'System Dashboard'}
+          </h2>
+          <span className="text-[11px] text-slate-400 mt-2 font-normal">
+            {user?.role === 'teacher' ? 'Your academic overview and exam controls.' : 'Real-time statistics and system overview.'}
+          </span>
         </div>
       </div>
 
@@ -98,7 +130,10 @@ export default function AdminDashboard() {
                   </div>
                   <stat.icon className="w-12 h-12 opacity-20" />
                 </div>
-                <button className="w-full bg-black/10 py-1.5 text-[10px] font-medium flex items-center justify-center gap-1 hover:bg-black/20 transition-colors">
+                <button 
+                  onClick={() => navigate(stat.link)}
+                  className="w-full bg-black/10 py-1.5 text-[10px] font-medium flex items-center justify-center gap-1 hover:bg-black/20 transition-colors"
+                >
                   {stat.sub} <ChevronRight className="w-2.5 h-2.5" />
                 </button>
               </div>

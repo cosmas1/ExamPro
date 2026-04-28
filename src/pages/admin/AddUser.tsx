@@ -1,10 +1,13 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  collection, query, onSnapshot, addDoc, serverTimestamp, setDoc, doc
+  collection, query, onSnapshot, serverTimestamp, setDoc, doc
 } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { db, auth } from '../../firebase';
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { db } from '../../firebase';
+import { UserRole } from '../../types';
+import firebaseConfig from '../../../firebase-applet-config.json';
 import AdminLayout from '../../components/AdminLayout';
 import Swal from 'sweetalert2';
 
@@ -25,7 +28,7 @@ export default function AddUser() {
     email: '',
     password: '123123',
     sessionId: '',
-    role: 'student'
+    role: 'student' as UserRole
   });
 
   useEffect(() => {
@@ -37,29 +40,37 @@ export default function AddUser() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!formData.name && (!formData.firstName || !formData.lastName)) {
-       Swal.fire('Error', 'Please enter a name', 'error');
+    
+    if (!formData.firstName || !formData.lastName) {
+       Swal.fire('Error', 'Please enter both first and last name', 'error');
        return;
     }
 
     setLoading(true);
     try {
-      // NOTE: Creating Auth users from Admin panel without Cloud Functions 
-      // will sign the Admin out. However, for this project we'll create the 
-      // Firestore document and rely on a default password.
-      // Real "Admission Number" login requires a mapping.
-      
-      const userRef = await addDoc(collection(db, 'users'), {
+      // Create secondary app to avoid signing out current admin
+      const secondaryAppName = 'SecondaryApp';
+      const secondaryApp = getApps().find(app => app.name === secondaryAppName) || initializeApp(firebaseConfig, secondaryAppName);
+      const secondaryAuth = getAuth(secondaryApp);
+
+      // 1. Create Auth Account
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, formData.email.trim().toLowerCase(), formData.password);
+      const user = userCredential.user;
+
+      // 2. Create Firestore Document
+      await setDoc(doc(db, 'users', user.uid), {
         name: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email.trim().toLowerCase(),
+        role: formData.role,
         admissionNumber: formData.admissionNumber.trim(),
         sessionId: formData.sessionId,
-        role: formData.role,
-        password: formData.password, // In a real app, store hash or use Auth
         createdAt: serverTimestamp(),
       });
 
-      Swal.fire('Success', `${formData.role === 'admin' ? 'Admin' : 'Student'} added successfully`, 'success');
+      // 3. Sign out from secondary app to clean up
+      await signOut(secondaryAuth);
+
+      Swal.fire('Success', `${formData.role === 'admin' ? 'Admin' : formData.role === 'teacher' ? 'Teacher' : 'Student'} account created. They can now login with ${formData.email} or ${formData.admissionNumber} and password ${formData.password}`, 'success');
       navigate('/admin/users');
     } catch (error: any) {
       Swal.fire('Error', error.message, 'error');
@@ -143,9 +154,10 @@ export default function AddUser() {
                   <select 
                     className="w-full border border-slate-200 rounded px-3 py-1.5 text-sm focus:border-[#3c8dbc] outline-none"
                     value={formData.role}
-                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                    onChange={e => setFormData({ ...formData, role: e.target.value as UserRole })}
                   >
                     <option value="student">Student</option>
+                    <option value="teacher">Teacher</option>
                     <option value="admin">Admin (Staff)</option>
                   </select>
                 </div>

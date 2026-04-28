@@ -99,10 +99,10 @@ export default function AdminLayout({ children, activeMenu, activeSubMenu }: Adm
             <img src={user?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`} alt="" referrerPolicy="no-referrer" />
           </div>
           <div className={cn("transition-opacity duration-300", isSidebarOpen ? "opacity-100" : "opacity-0")}>
-            <p className="font-bold text-xs leading-none truncate w-24">G Tech</p>
+            <p className="font-bold text-xs leading-none truncate w-24">{user?.name || 'G Tech'}</p>
             <div className="flex items-center gap-1 mt-1">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-[10px] text-slate-300 uppercase">Online</span>
+              <span className="text-[10px] text-slate-300 uppercase">{user?.role || 'Staff'}</span>
             </div>
           </div>
         </div>
@@ -161,7 +161,7 @@ export default function AdminLayout({ children, activeMenu, activeSubMenu }: Adm
                 <div className="w-7 h-7 rounded-full bg-slate-200 overflow-hidden border border-white/20">
                   <img src={user?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`} alt="" referrerPolicy="no-referrer" />
                 </div>
-                <span className="text-xs font-bold tracking-wide">G Tech</span>
+                <span className="text-xs font-bold tracking-wide">{user?.name || 'G Tech'}</span>
              </div>
           </div>
         </header>

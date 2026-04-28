@@ -18,6 +18,14 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
     
+    function isStaff() {
+      return isSignedIn() && (
+        getUserData().role == 'admin' || 
+        getUserData().role == 'teacher' || 
+        request.auth.token.email == 'musaukulenga1@gmail.com'
+      );
+    }
+
     function isAdmin() {
       return isSignedIn() && (
         getUserData().role == 'admin' || 
@@ -43,7 +51,7 @@ service cloud.firestore {
     
     function isValidUser(data) {
       return data.email is string && 
-             data.role in ['admin', 'student'] &&
+             data.role in ['admin', 'teacher', 'student'] &&
              data.keys().hasAll(['email', 'role']);
     }
     
@@ -62,45 +70,45 @@ service cloud.firestore {
     }
     
     match /users/{userId} {
-      allow get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow list: if isAdmin();
+      allow get: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      allow list: if isStaff();
       allow create: if isSignedIn(); // Allow initial registration
-      allow update: if (isSignedIn() && request.auth.uid == userId) || isAdmin();
+      allow update: if (isSignedIn() && request.auth.uid == userId) || isStaff();
       allow delete: if isAdmin();
     }
     
     match /sessions/{sessionId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isStaff();
     }
     
     match /categories/{catId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isStaff();
     }
     
     match /subcategories/{subId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isStaff();
     }
     
     match /exams/{examId} {
       allow read: if isSignedIn() && (
-        isAdmin() || 
+        isStaff() || 
         (existing().status == 'published' && existing().sessionId == getUserData().sessionId)
       );
-      allow write: if isAdmin();
+      allow write: if isStaff();
     }
     
     match /questions/{qId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isStaff();
     }
     
     match /submissions/{subId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isStaff());
       allow create: if isSignedIn() && incoming().userId == request.auth.uid;
-      allow update: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow update: if isSignedIn() && (existing().userId == request.auth.uid || isStaff());
       allow delete: if isAdmin();
     }
   }

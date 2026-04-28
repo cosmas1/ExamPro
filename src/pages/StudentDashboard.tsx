@@ -43,6 +43,8 @@ export default function StudentDashboard() {
         { ...prev[2], value: passed.toString() },
         { ...prev[3], value: failed.toString() },
       ]);
+    }, (error) => {
+      console.error("Submissions snapshot error:", error);
     });
     return () => unsub();
   }, []);

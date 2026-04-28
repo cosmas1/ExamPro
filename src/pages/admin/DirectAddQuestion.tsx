@@ -17,7 +17,7 @@ export default function DirectAddQuestion() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     paperId: '',
-    type: 'Multiple Choice Single Answer',
+    type: 'mcq',
     language: 'Only Hindi',
     numOptions: 4,
     categoryId: '',
@@ -25,7 +25,8 @@ export default function DirectAddQuestion() {
     level: 'Simple',
     questionText: '',
     options: ['', '', '', ''],
-    correctOption: 0
+    correctAnswer: 0 as number | string,
+    possibleAnswers: '' as string // Comma separated for short answers
   });
 
   const [papers, setPapers] = useState<Paper[]>([]);
@@ -70,17 +71,29 @@ export default function DirectAddQuestion() {
 
     try {
       Swal.showLoading();
+      
+      let processedCorrectAnswer = formData.correctAnswer;
+      let processedPossibleAnswers: string[] = [];
+
+      if (formData.type === 'short_answer') {
+        processedPossibleAnswers = formData.possibleAnswers.split(',').map(s => s.trim());
+        processedCorrectAnswer = processedPossibleAnswers[0] || '';
+      } else if (formData.type === 'long_answer') {
+        processedCorrectAnswer = '';
+      }
+
       // 1. Add the question to questions collection
       const questionRef = await addDoc(collection(db, 'questions'), {
         type: formData.type,
         language: formData.language,
-        numOptions: formData.numOptions,
+        numOptions: formData.type === 'mcq' ? formData.numOptions : 0,
         categoryId: formData.categoryId,
         subCategoryId: formData.subCategoryId,
         level: formData.level,
         questionText: formData.questionText,
-        options: formData.options,
-        correctOption: formData.correctOption,
+        options: (formData.type === 'mcq' || formData.type === 'true_false') ? formData.options : [],
+        correctAnswer: processedCorrectAnswer,
+        possibleAnswers: processedPossibleAnswers,
         createdBy: user.uid,
         createdAt: serverTimestamp(),
       });
@@ -95,13 +108,15 @@ export default function DirectAddQuestion() {
         totalQuestions: currentTotal + 1
       });
 
-      // 3. Also add to sub-collection for easier fetching in exam interface
+      // 3. Also add to sub-collection
       await setDoc(doc(db, 'exams', formData.paperId, 'questions', questionRef.id), {
         id: questionRef.id,
         text: formData.questionText,
-        options: formData.options,
-        correctAnswer: formData.correctOption,
-        points: 1, // Default points
+        options: (formData.type === 'mcq' || formData.type === 'true_false') ? formData.options : [],
+        correctAnswer: processedCorrectAnswer,
+        possibleAnswers: processedPossibleAnswers,
+        type: formData.type,
+        points: 1,
         order: currentTotal + 1
       });
 
@@ -167,11 +182,24 @@ export default function DirectAddQuestion() {
                     <select 
                       className="w-full border border-[#d2d6de] rounded px-3 py-2 text-sm focus:border-blue-400 transition-colors bg-white font-medium text-slate-600 outline-none"
                       value={formData.type}
-                      onChange={e => setFormData({ ...formData, type: e.target.value })}
+                      onChange={e => {
+                        const type = e.target.value;
+                        let options = formData.options;
+                        let numOptions = formData.numOptions;
+                        if (type === 'true_false') {
+                          options = ['True', 'False'];
+                          numOptions = 2;
+                        } else if (type === 'mcq') {
+                          options = ['', '', '', ''];
+                          numOptions = 4;
+                        }
+                        setFormData({ ...formData, type, options, numOptions });
+                      }}
                     >
-                      <option>Multiple Choice Single Answer</option>
-                      <option>True / False</option>
-                      <option>Fill in the blank</option>
+                      <option value="mcq">Multiple Choice</option>
+                      <option value="true_false">True / False</option>
+                      <option value="short_answer">Short Answer</option>
+                      <option value="long_answer">Long Answer (Essay)</option>
                     </select>
                   </div>
 
@@ -189,23 +217,25 @@ export default function DirectAddQuestion() {
                     </select>
                   </div>
 
-                  {/* Number of Options */}
-                  <div className="space-y-2 pb-6">
-                    <label className="block text-sm font-bold text-slate-700">Number of Options</label>
-                    <input 
-                      type="number" 
-                      className="w-full border border-[#d2d6de] rounded px-3 py-2 text-sm focus:border-blue-400 font-medium text-slate-600 outline-none"
-                      value={formData.numOptions}
-                      onChange={e => {
-                        const n = Math.max(1, parseInt(e.target.value) || 0);
-                        setFormData({ 
-                          ...formData, 
-                          numOptions: n,
-                          options: Array(n).fill('')
-                        });
-                      }}
-                    />
-                  </div>
+                  {/* Number of Options (only for MCQ) */}
+                  {formData.type === 'mcq' && (
+                    <div className="space-y-2 pb-6">
+                      <label className="block text-sm font-bold text-slate-700">Number of Options</label>
+                      <input 
+                        type="number" 
+                        className="w-full border border-[#d2d6de] rounded px-3 py-2 text-sm focus:border-blue-400 font-medium text-slate-600 outline-none"
+                        value={formData.numOptions}
+                        onChange={e => {
+                          const n = Math.max(1, parseInt(e.target.value) || 0);
+                          setFormData({ 
+                            ...formData, 
+                            numOptions: n,
+                            options: Array(n).fill('')
+                          });
+                        }}
+                      />
+                    </div>
+                  )}
 
                   <button 
                     onClick={() => {
@@ -306,39 +336,68 @@ export default function DirectAddQuestion() {
                     </div>
                   </div>
 
-                  {/* Options */}
-                  <div className="space-y-8">
-                    {formData.options.map((option, idx) => (
-                      <div key={idx} className="space-y-3">
-                        <div className="flex items-center gap-4">
-                          <label className="text-[11px] font-bold text-slate-700 uppercase">Options {idx + 1})</label>
-                          <label className="flex items-center gap-2 cursor-pointer group">
-                            <input 
-                              type="radio" 
-                              name="correct" 
-                              required
-                              checked={formData.correctOption === idx}
-                              onChange={() => setFormData({ ...formData, correctOption: idx })}
-                              className="w-3.5 h-3.5 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-[10px] text-blue-600 font-bold group-hover:underline">Select Correct Option</span>
-                          </label>
-                        </div>
-                        <div className="border border-slate-300 rounded overflow-hidden shadow-sm">
-                          <div className="bg-[#f4f4f4] p-1 border-b border-slate-200">
-                             <button type="button" className="p-1 hover:bg-slate-200 rounded"><FileText className="w-4 h-4 opacity-70" /></button>
+                  {/* Options (MCQ / TF) */}
+                  {(formData.type === 'mcq' || formData.type === 'true_false') && (
+                    <div className="space-y-8">
+                      {formData.options.map((option, idx) => (
+                        <div key={idx} className="space-y-3">
+                          <div className="flex items-center gap-4">
+                            <label className="text-[11px] font-bold text-slate-700 uppercase">Option {idx + 1})</label>
+                            <label className="flex items-center gap-2 cursor-pointer group">
+                              <input 
+                                type="radio" 
+                                name="correct" 
+                                required
+                                checked={formData.correctAnswer === idx}
+                                onChange={() => setFormData({ ...formData, correctAnswer: idx })}
+                                className="w-3.5 h-3.5 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-[10px] text-blue-600 font-bold group-hover:underline">Select Correct Option</span>
+                            </label>
                           </div>
-                          <textarea 
-                            required
-                            placeholder={`Option ${idx + 1}`}
-                            className="w-full h-24 p-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white resize-none"
-                            value={option}
-                            onChange={e => updateOption(idx, e.target.value)}
-                          />
+                          <div className="border border-slate-300 rounded overflow-hidden shadow-sm">
+                            <div className="bg-[#f4f4f4] p-1 border-b border-slate-200">
+                               <button type="button" className="p-1 hover:bg-slate-200 rounded"><FileText className="w-4 h-4 opacity-70" /></button>
+                            </div>
+                            <textarea 
+                              required
+                              placeholder={`Option ${idx + 1}`}
+                              className="w-full h-24 p-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white resize-none"
+                              value={option}
+                              onChange={e => {
+                                if (formData.type === 'true_false') return; // T/F are fixed
+                                updateOption(idx, e.target.value);
+                              }}
+                              readOnly={formData.type === 'true_false'}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Short Answer */}
+                  {formData.type === 'short_answer' && (
+                    <div className="space-y-3">
+                      <label className="block text-xs font-bold text-slate-700 uppercase">Possible Answers (Comma separated)</label>
+                      <input 
+                        type="text"
+                        required
+                        placeholder="e.g. 4, Four, four"
+                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm bg-white outline-none focus:border-blue-400"
+                        value={formData.possibleAnswers}
+                        onChange={e => setFormData({ ...formData, possibleAnswers: e.target.value })}
+                      />
+                      <p className="text-[10px] text-slate-400 italic">Separate acceptable answers with commas. The first one will be shown as correct in keys.</p>
+                    </div>
+                  )}
+
+                  {/* Long Answer */}
+                  {formData.type === 'long_answer' && (
+                    <div className="bg-blue-50 p-4 rounded border border-blue-100 text-blue-700 text-xs">
+                      Long Answer (Essay) questions are descriptive. They will be saved to the database but no automatic grading will be performed. Students will be provided a multi-line text area.
+                    </div>
+                  )}
 
                   <div className="flex gap-4 pt-8 border-t border-slate-100 pb-12">
                     <button 

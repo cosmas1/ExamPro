@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'student';
+export type UserRole = 'admin' | 'teacher' | 'student';
 
 export interface AppUser {
   uid: string;
@@ -7,6 +7,8 @@ export interface AppUser {
   role: UserRole;
   createdAt: string;
   registrationNumber?: string;
+  admissionNumber?: string;
+  activeSessionId?: string;
   group?: string;
 }
 
@@ -40,7 +42,7 @@ export interface Paper {
 export interface Question {
   id: string;
   examId?: string;
-  type?: string;
+  type?: 'mcq' | 'true_false' | 'short_answer' | 'long_answer' | string;
   language?: string;
   numOptions?: number;
   categoryId?: string;
@@ -50,7 +52,8 @@ export interface Question {
   text?: string;
   options: string[];
   correctOption?: number;
-  correctAnswer?: number;
+  correctAnswer?: number | string; // index for mcq/tf, or string/serialized for others
+  possibleAnswers?: string[]; // for short answers
   explanation?: string;
   order?: number;
   points?: number;
@@ -62,7 +65,7 @@ export interface Submission {
   studentId: string;
   startTime: string;
   endTime?: string;
-  answers: Record<string, number>; // questionId -> answerIndex
+  answers: Record<string, number | string>; // questionId -> answerIndex or text
   score?: number;
   status: 'in-progress' | 'completed';
   totalMarks: number;

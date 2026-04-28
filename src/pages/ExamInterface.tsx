@@ -168,19 +168,21 @@ export default function ExamInterface() {
     return () => clearInterval(timer);
   }, [timeLeft, isSubmitting, answers, questions, exam]);
 
-  const handleSelectAnswer = async (qId: string, aIdx: number) => {
-    const newAnswers = { ...answers, [qId]: aIdx };
+  const handleSelectAnswer = async (qId: string, value: number | string) => {
+    const newAnswers = { ...answers, [qId]: value };
     setAnswers(newAnswers);
     
     // Debounced or simple auto-save
     try {
-      await updateDoc(doc(db, 'submissions', submission!.id), {
-        answers: newAnswers
-      });
+      if (submission) {
+        await updateDoc(doc(db, 'submissions', submission.id), {
+          answers: newAnswers
+        });
+      }
     } catch (e) { console.error("Auto-save failed", e); }
   };
 
-  const autoSubmit = (finalAnswers: Record<string, number>, finalQs: Question[], totalMarks: number) => {
+  const autoSubmit = (finalAnswers: Record<string, number | string>, finalQs: Question[], totalMarks: number) => {
     Swal.fire({
       title: 'Time Expired!',
       text: 'Your exam is being automatically submitted.',
@@ -191,15 +193,37 @@ export default function ExamInterface() {
     });
   };
 
-  const submitExam = async (finalAnswers: Record<string, number>, finalQs: Question[], totalMarks: number) => {
+  const submitExam = async (finalAnswers: Record<string, number | string>, finalQs: Question[], totalMarks: number) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
     try {
       let score = 0;
       finalQs.forEach(q => {
-        if (finalAnswers[q.id] === q.correctAnswer) {
-          score += (Number(q.points) || 1);
+        const userAnswer = finalAnswers[q.id];
+        
+        switch (q.type) {
+          case 'mcq':
+          case 'true_false':
+            if (userAnswer === q.correctAnswer) {
+              score += (Number(q.points) || 1);
+            }
+            break;
+          case 'short_answer':
+            // Check if user answer matches any of the possible answers
+            const possible = q.possibleAnswers || [];
+            if (typeof userAnswer === 'string' && possible.some(p => p.trim().toLowerCase() === userAnswer.trim().toLowerCase())) {
+              score += (Number(q.points) || 1);
+            }
+            break;
+          case 'long_answer':
+            // Long answers aren't auto-graded usually, but we could add AI grading or just mark as 0/pending
+            break;
+          default:
+            // fallback for old data
+            if (userAnswer === q.correctAnswer) {
+              score += (Number(q.points) || 1);
+            }
         }
       });
 
@@ -312,31 +336,55 @@ export default function ExamInterface() {
                  </h3>
 
                  <div className="grid gap-4">
-                    {currentQ.options.map((option, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handleSelectAnswer(currentQ.id, idx)}
-                        className={cn(
-                          "w-full text-left p-6 rounded-3xl border-2 transition-all flex items-center gap-6 group hover:scale-[1.01] active:scale-[0.98]",
-                          answers[currentQ.id] === idx 
-                           ? "bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-100" 
-                           : "bg-white border-slate-100 text-slate-600 hover:border-indigo-100"
-                        )}
-                      >
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0",
-                          answers[currentQ.id] === idx ? "bg-indigo-500 text-white" : "bg-slate-50 text-slate-500 group-hover:bg-indigo-50"
-                        )}>
-                          {String.fromCharCode(65 + idx)}
-                        </div>
-                        <span className="text-lg font-medium">{option}</span>
-                        {answers[currentQ.id] === idx && (
-                          <div className="ml-auto">
-                             <CheckCircle2 className="w-6 h-6 text-indigo-200 animate-in zoom-in-50" />
+                    {currentQ.type === 'short_answer' ? (
+                      <div className="space-y-4">
+                        <input 
+                          type="text"
+                          className="w-full p-6 rounded-3xl border-2 border-slate-100 bg-white text-lg font-medium outline-none focus:border-indigo-400"
+                          placeholder="Type your answer here..."
+                          value={answers[currentQ.id] || ''}
+                          onChange={(e) => handleSelectAnswer(currentQ.id, e.target.value)}
+                        />
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest pl-4">Case insensitive comparison will be used.</p>
+                      </div>
+                    ) : currentQ.type === 'long_answer' ? (
+                      <div className="space-y-4">
+                        <textarea 
+                          rows={8}
+                          className="w-full p-6 rounded-3xl border-2 border-slate-100 bg-white text-lg font-medium outline-none focus:border-indigo-400 resize-none"
+                          placeholder="Write your response..."
+                          value={answers[currentQ.id] || ''}
+                          onChange={(e) => handleSelectAnswer(currentQ.id, e.target.value)}
+                        />
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest pl-4">Your response will be saved automatically.</p>
+                      </div>
+                    ) : (
+                      currentQ.options.map((option, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleSelectAnswer(currentQ.id, idx)}
+                          className={cn(
+                            "w-full text-left p-6 rounded-3xl border-2 transition-all flex items-center gap-6 group hover:scale-[1.01] active:scale-[0.98]",
+                            answers[currentQ.id] === idx 
+                             ? "bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-100" 
+                             : "bg-white border-slate-100 text-slate-600 hover:border-indigo-100"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0",
+                            answers[currentQ.id] === idx ? "bg-indigo-500 text-white" : "bg-slate-50 text-slate-500 group-hover:bg-indigo-50"
+                          )}>
+                            {currentQ.type === 'true_false' ? (idx === 0 ? 'T' : 'F') : String.fromCharCode(65 + idx)}
                           </div>
-                        )}
-                      </button>
-                    ))}
+                          <span className="text-lg font-medium">{option}</span>
+                          {answers[currentQ.id] === idx && (
+                            <div className="ml-auto">
+                               <CheckCircle2 className="w-6 h-6 text-indigo-200 animate-in zoom-in-50" />
+                            </div>
+                          )}
+                        </button>
+                      ))
+                    )}
                  </div>
                </div>
              ) : (
