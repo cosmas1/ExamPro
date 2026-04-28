@@ -17,7 +17,6 @@ export default function AddQuestion() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     type: 'Multiple Choice Single Answer',
-    language: 'Only English',
     numOptions: 4,
     categoryId: '',
     subCategoryId: '',
@@ -111,18 +110,6 @@ export default function AddQuestion() {
                       <option>Multiple Choice Single Answer</option>
                       <option>True / False</option>
                       <option>Fill in the blank</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Select question language</label>
-                    <select 
-                      className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:border-blue-400 transition-colors bg-white"
-                      value={formData.language}
-                      onChange={e => setFormData({ ...formData, language: e.target.value })}
-                    >
-                      <option>Only English</option>
-                      <option>Hindi & English</option>
                     </select>
                   </div>
 

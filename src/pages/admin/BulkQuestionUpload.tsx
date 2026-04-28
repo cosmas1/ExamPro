@@ -16,7 +16,6 @@ export default function BulkQuestionUpload() {
   const [papers, setPapers] = useState<Paper[]>([]);
   
   const [formData, setFormData] = useState({
-    excelFormat: 'Single Language',
     categoryId: '',
     subCategoryId: '',
     paperId: '', // Optional: Link directly to paper
@@ -206,18 +205,6 @@ export default function BulkQuestionUpload() {
               {/* Upload Form */}
               <div className="space-y-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">Excel Format</label>
-                  <select 
-                    className="w-full border border-slate-300 rounded px-3 py-2 text-sm bg-white focus:border-blue-400 transition-colors"
-                    value={formData.excelFormat}
-                    onChange={e => setFormData({ ...formData, excelFormat: e.target.value })}
-                  >
-                    <option>Single Language</option>
-                    <option>Dual Language</option>
-                  </select>
-                </div>
-
-                <div>
                   <label className="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
                     Link Directly to Paper (Optional)
                   </label>
@@ -293,17 +280,7 @@ export default function BulkQuestionUpload() {
                     <div className="p-3 bg-white/10 rounded-full group-hover:scale-110 transition-transform">
                       <Download className="w-6 h-6" />
                     </div>
-                    <span className="text-sm font-bold tracking-tight">Download Sample Excel File <br/><span className="text-xs font-normal opacity-80">(Single Language)</span></span>
-                  </div>
-                  <ChevronRight className="w-5 h-5 opacity-50 group-hover:translate-x-1 transition-transform" />
-                </button>
-
-                <button className="w-full bg-[#7029cb] hover:bg-[#5d1faf] text-white p-6 rounded flex items-center justify-between group transition-all shadow-md text-left">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-white/10 rounded-full group-hover:scale-110 transition-transform">
-                      <Download className="w-6 h-6" />
-                    </div>
-                    <span className="text-sm font-bold tracking-tight">Download Sample Excel File <br/><span className="text-xs font-normal opacity-80">(Dual Language)</span></span>
+                    <span className="text-sm font-bold tracking-tight">Download Sample Excel File</span>
                   </div>
                   <ChevronRight className="w-5 h-5 opacity-50 group-hover:translate-x-1 transition-transform" />
                 </button>

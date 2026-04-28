@@ -18,7 +18,6 @@ export default function DirectAddQuestion() {
   const [formData, setFormData] = useState({
     paperId: '',
     type: 'mcq',
-    language: 'Only Hindi',
     numOptions: 4,
     categoryId: '',
     subCategoryId: '',
@@ -85,7 +84,6 @@ export default function DirectAddQuestion() {
       // 1. Add the question to questions collection
       const questionRef = await addDoc(collection(db, 'questions'), {
         type: formData.type,
-        language: formData.language,
         numOptions: formData.type === 'mcq' ? formData.numOptions : 0,
         categoryId: formData.categoryId,
         subCategoryId: formData.subCategoryId,
@@ -200,20 +198,6 @@ export default function DirectAddQuestion() {
                       <option value="true_false">True / False</option>
                       <option value="short_answer">Short Answer</option>
                       <option value="long_answer">Long Answer (Essay)</option>
-                    </select>
-                  </div>
-
-                  {/* Question Language */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-bold text-slate-700">Select question language</label>
-                    <select 
-                      className="w-full border border-[#d2d6de] rounded px-3 py-2 text-sm focus:border-blue-400 transition-colors bg-white font-medium text-slate-600 outline-none"
-                      value={formData.language}
-                      onChange={e => setFormData({ ...formData, language: e.target.value })}
-                    >
-                      <option>Only Hindi</option>
-                      <option>Only English</option>
-                      <option>Hindi & English</option>
                     </select>
                   </div>
 
