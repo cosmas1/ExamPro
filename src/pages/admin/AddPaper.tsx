@@ -34,6 +34,11 @@ export default function AddPaper() {
     showResult: 'Yes',
   });
 
+  const [dateTimes, setDateTimes] = useState({
+    startTime: new Date().toISOString().slice(0, 16),
+    endTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)
+  });
+
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'sessions'), (snap) => {
       setSessions(snap.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
@@ -53,11 +58,13 @@ export default function AddPaper() {
         durationMinutes: Number(formData.durationMinutes),
         instructions: formData.instructions,
         sessionId: formData.sessionId,
-        status: 'published', // Direct publish for now or draft? User implies ongoing
+        status: 'published',
         createdAt: serverTimestamp(),
         isLive: false,
         createdBy: user?.uid,
         totalQuestions: 0,
+        startTime: dateTimes.startTime,
+        endTime: dateTimes.endTime,
         settings: formData
       });
       Swal.fire('Success', 'Paper created! Now add your questions.', 'success');
@@ -162,13 +169,23 @@ export default function AddPaper() {
                       />
                    </div>
                    <div className="col-span-2 space-y-4 pt-4 border-t border-slate-100">
-                      <div className="flex items-center gap-4">
-                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Start Date</label>
-                         <input type="text" className="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs" value={formData.startTime} readOnly />
+                      <div>
+                         <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Start Date & Time</label>
+                         <input 
+                           type="datetime-local" 
+                           className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#3c8dbc] outline-none" 
+                           value={dateTimes.startTime} 
+                           onChange={e => setDateTimes({ ...dateTimes, startTime: e.target.value })}
+                         />
                       </div>
-                      <div className="flex items-center gap-4">
-                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">End Date</label>
-                         <input type="text" className="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs" value={formData.endTime} readOnly />
+                      <div>
+                         <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">End Date & Time</label>
+                         <input 
+                           type="datetime-local" 
+                           className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#3c8dbc] outline-none" 
+                           value={dateTimes.endTime} 
+                           onChange={e => setDateTimes({ ...dateTimes, endTime: e.target.value })}
+                         />
                       </div>
                    </div>
                 </div>

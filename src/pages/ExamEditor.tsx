@@ -21,7 +21,9 @@ export default function ExamEditor() {
     durationMinutes: 60,
     status: 'draft',
     totalMarks: 0,
-    totalQuestions: 0
+    totalQuestions: 0,
+    startTime: '',
+    endTime: ''
   });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -41,16 +43,21 @@ export default function ExamEditor() {
       const examDoc = await getDoc(doc(db, 'exams', examId!));
       if (examDoc.exists()) {
         const data = examDoc.data() as Exam;
-        if (data.createdBy !== user?.uid) {
+        // Relax check: teachers and admins can edit
+        if (user?.role !== 'admin' && user?.role !== 'teacher' && data.createdBy !== user?.uid) {
           navigate('/admin');
           return;
         }
-        setExam(data);
+        setExam({
+          ...data,
+          startTime: data.startTime || '',
+          endTime: data.endTime || ''
+        });
         
         // Load questions
         const qSnap = await getDocs(collection(db, 'exams', examId!, 'questions'));
         const qs = qSnap.docs.map(d => ({ id: d.id, ...d.data() } as Question));
-        setQuestions(qs.sort((a, b) => a.order - b.order));
+        setQuestions(qs.sort((a, b) => (a.order || 0) - (b.order || 0)));
       }
     } catch (error) {
       console.error(error);
@@ -66,18 +73,20 @@ export default function ExamEditor() {
     try {
       const data = {
         ...exam,
-        createdBy: user?.uid,
+        createdBy: exam.createdBy || user?.uid,
         createdAt: exam.createdAt || new Date().toISOString(),
         totalQuestions: questions.length,
-        totalMarks: questions.reduce((sum, q) => sum + (q.points || 1), 0)
+        totalMarks: questions.reduce((sum, q) => sum + (Number(q.points) || 1), 0),
+        startTime: exam.startTime,
+        endTime: exam.endTime
       };
 
       if (examId) {
         await updateDoc(doc(db, 'exams', examId), data);
       } else {
-        const newExamRef = doc(collection(db, 'exams'));
-        await setDoc(newExamRef, data);
-        navigate(`/admin/exam/${newExamRef.id}`);
+        const newRef = doc(collection(db, 'exams'));
+        await setDoc(newRef, data);
+        navigate(`/admin/exam/${newRef.id}`);
       }
       Swal.fire('Success', 'Exam metadata saved', 'success');
     } catch (error) {
@@ -91,9 +100,11 @@ export default function ExamEditor() {
     const newQ: Question = {
       id: Math.random().toString(36).substring(7),
       examId: examId || '',
+      type: 'mcq',
       text: '',
       options: ['', '', '', ''],
       correctAnswer: 0,
+      possibleAnswers: [],
       explanation: '',
       order: questions.length,
       points: 1
@@ -244,6 +255,27 @@ export default function ExamEditor() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <label className="block text-sm font-black text-slate-700 uppercase tracking-widest mb-2">Start Time</label>
+                  <input 
+                    type="datetime-local" 
+                    value={exam.startTime}
+                    onChange={e => setExam({...exam, startTime: e.target.value})}
+                    className="w-full bg-slate-50 rounded-2xl border-slate-100 focus:border-indigo-600 p-4 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-black text-slate-700 uppercase tracking-widest mb-2">End Time</label>
+                  <input 
+                    type="datetime-local" 
+                    value={exam.endTime}
+                    onChange={e => setExam({...exam, endTime: e.target.value})}
+                    className="w-full bg-slate-50 rounded-2xl border-slate-100 focus:border-indigo-600 p-4 font-bold"
+                  />
+                </div>
+              </div>
+
               <div className="p-6 bg-indigo-50 rounded-3xl flex gap-4">
                 <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 shrink-0">
                   <Info className="w-5 h-5" />
@@ -310,6 +342,22 @@ export default function ExamEditor() {
                   <div className="flex justify-between items-center">
                     <span className="px-2 py-1 bg-slate-800 text-white rounded text-[10px] font-bold uppercase tracking-wider">Question {currentQuestionIndex + 1}</span>
                     <div className="flex items-center gap-4">
+                       <select 
+                         value={currentQ.type || 'mcq'}
+                         onChange={e => {
+                           const type = e.target.value;
+                           let options = currentQ.options;
+                           if (type === 'true_false') options = ['True', 'False'];
+                           else if (type === 'mcq' && options.length < 2) options = ['', '', '', ''];
+                           updateQuestion(currentQuestionIndex, { type, options });
+                         }}
+                         className="bg-slate-50 border border-slate-200 rounded p-1.5 text-xs font-bold"
+                       >
+                         <option value="mcq">MCQ</option>
+                         <option value="true_false">True / False</option>
+                         <option value="short_answer">Short Answer</option>
+                         <option value="long_answer">Long Answer</option>
+                       </select>
                        <label className="flex items-center gap-2 cursor-pointer">
                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Weightage:</span>
                          <input 
@@ -333,40 +381,58 @@ export default function ExamEditor() {
                     />
                   </div>
 
-                  <div className="space-y-4">
-                    <label className="block text-sm font-black text-slate-700 uppercase tracking-widest">Answer Options</label>
-                    <div className="grid gap-3">
-                      {currentQ.options.map((opt, oIdx) => (
-                        <div key={oIdx} className="flex gap-3 items-center group">
-                          <button 
-                            onClick={() => updateQuestion(currentQuestionIndex, { correctAnswer: oIdx })}
-                            className={cn(
-                              "w-12 h-12 rounded-2xl flex items-center justify-center transition-all border-2",
-                              currentQ.correctAnswer === oIdx 
-                                ? "bg-green-500 border-green-500 text-white shadow-lg shadow-green-100" 
-                                : "bg-white border-slate-100 text-slate-400 hover:border-indigo-100"
-                            )}
-                          >
-                            {currentQ.correctAnswer === oIdx ? <CheckCircle2 className="w-6 h-6" /> : String.fromCharCode(65 + oIdx)}
-                          </button>
-                          <input 
-                            type="text" 
-                            value={opt}
-                            onChange={e => {
-                              const newOpts = [...currentQ.options];
-                              newOpts[oIdx] = e.target.value;
-                              updateQuestion(currentQuestionIndex, { options: newOpts });
-                            }}
-                            className={cn(
-                              "flex-1 bg-white border-2 rounded-2xl p-4 transition-all",
-                              currentQ.correctAnswer === oIdx ? "border-green-500 ring-4 ring-green-50" : "border-slate-100 focus:border-indigo-600"
-                            )}
-                            placeholder={`Option ${String.fromCharCode(65 + oIdx)}`}
-                          />
-                        </div>
-                      ))}
+                  {currentQ.type === 'short_answer' ? (
+                    <div className="space-y-4">
+                      <label className="block text-sm font-black text-slate-700 uppercase tracking-widest">Correct Answer(s)</label>
+                      <input 
+                        type="text"
+                        value={(currentQ.possibleAnswers || []).join(', ')}
+                        onChange={e => updateQuestion(currentQuestionIndex, { possibleAnswers: e.target.value.split(',').map(s => s.trim()) })}
+                        className="w-full bg-white border-2 border-slate-100 rounded-2xl p-4 focus:border-indigo-600"
+                        placeholder="Comma separated acceptable answers..."
+                      />
                     </div>
-                  </div>
+                  ) : currentQ.type === 'long_answer' ? (
+                    <div className="p-6 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-center text-slate-400 font-medium">
+                      Essay / Long Answer question. No auto-grading.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <label className="block text-sm font-black text-slate-700 uppercase tracking-widest">Answer Options</label>
+                      <div className="grid gap-3">
+                        {currentQ.options.map((opt, oIdx) => (
+                          <div key={oIdx} className="flex gap-3 items-center group">
+                            <button 
+                              onClick={() => updateQuestion(currentQuestionIndex, { correctAnswer: oIdx })}
+                              className={cn(
+                                "w-12 h-12 rounded-2xl flex items-center justify-center transition-all border-2",
+                                currentQ.correctAnswer === oIdx 
+                                  ? "bg-green-500 border-green-500 text-white shadow-lg shadow-green-100" 
+                                  : "bg-white border-slate-100 text-slate-400 hover:border-indigo-100"
+                              )}
+                            >
+                              {currentQ.correctAnswer === oIdx ? <CheckCircle2 className="w-6 h-6" /> : String.fromCharCode(65 + oIdx)}
+                            </button>
+                            <input 
+                              type="text" 
+                              value={opt}
+                              readOnly={currentQ.type === 'true_false'}
+                              onChange={e => {
+                                const newOpts = [...currentQ.options];
+                                newOpts[oIdx] = e.target.value;
+                                updateQuestion(currentQuestionIndex, { options: newOpts });
+                              }}
+                              className={cn(
+                                "flex-1 bg-white border-2 rounded-2xl p-4 transition-all",
+                                currentQ.correctAnswer === oIdx ? "border-green-500 ring-4 ring-green-50" : "border-slate-100 focus:border-indigo-600"
+                              )}
+                              placeholder={`Option ${String.fromCharCode(65 + oIdx)}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-4 pt-6">
                     <label className="block text-sm font-black text-slate-700 uppercase tracking-widest">Explanation (Optional)</label>

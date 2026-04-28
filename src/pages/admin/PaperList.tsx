@@ -6,15 +6,10 @@ import {
 import { db } from '../../firebase';
 import { Exam } from '../../types';
 import AdminLayout from '../../components/AdminLayout';
-import { Edit2, Trash2, Eye, Play, Pause, Search, BarChart3 } from 'lucide-react';
+import { Edit2, Trash2, Eye, Play, Pause, Search, BarChart3, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import Swal from 'sweetalert2';
-
-interface Session {
-  id: string;
-  name: string;
-}
 
 export default function PaperList() {
   const navigate = useNavigate();
@@ -26,16 +21,18 @@ export default function PaperList() {
   useEffect(() => {
     // Fetch Sessions mapping
     const fetchSessions = async () => {
-      const snap = await getDocs(collection(db, 'sessions'));
-      const mapping: Record<string, string> = {};
-      snap.docs.forEach(doc => mapping[doc.id] = doc.data().name);
-      setSessions(mapping);
+      try {
+        const snap = await getDocs(collection(db, 'sessions'));
+        const mapping: Record<string, string> = {};
+        snap.docs.forEach(doc => mapping[doc.id] = doc.data().name);
+        setSessions(mapping);
+      } catch (e) { console.error(e); }
     };
     fetchSessions();
 
     const q = query(collection(db, 'exams'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setExams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as Exam)));
+      setExams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Exam)));
       setLoading(false);
     }, (error) => {
       console.error("Exams snapshot error:", error);
@@ -43,6 +40,62 @@ export default function PaperList() {
     });
     return () => unsubscribe();
   }, []);
+
+  const handleEditTime = async (exam: Exam) => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Edit Exam Details',
+      html: `
+        <div class="space-y-4 text-left p-2">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Duration (Min)</label>
+            <input id="swal-duration" type="number" class="w-full p-2 border rounded" value="${exam.durationMinutes}">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Start Time</label>
+            <input id="swal-start" type="datetime-local" class="w-full p-2 border rounded" value="${exam.startTime || ''}">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">End Time</label>
+            <input id="swal-end" type="datetime-local" class="w-full p-2 border rounded" value="${exam.endTime || ''}">
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      preConfirm: () => {
+        return {
+          durationMinutes: (document.getElementById('swal-duration') as HTMLInputElement).value,
+          startTime: (document.getElementById('swal-start') as HTMLInputElement).value,
+          endTime: (document.getElementById('swal-end') as HTMLInputElement).value
+        }
+      }
+    });
+
+    if (formValues) {
+      try {
+        await updateDoc(doc(db, 'exams', exam.id), {
+          durationMinutes: Number(formValues.durationMinutes),
+          startTime: formValues.startTime,
+          endTime: formValues.endTime
+        });
+        Swal.fire('Updated!', 'Exam timing has been updated.', 'success');
+      } catch (e) {
+        Swal.fire('Error', 'Failed to update timing.', 'error');
+      }
+    }
+  };
+
+  const safeFormatDate = (date: any) => {
+    if (!date) return 'N/A';
+    try {
+      // If Firestore Timestamp
+      if (date.toDate) return format(date.toDate(), 'MMM dd, yyyy');
+      // If ISO string or number
+      return format(new Date(date), 'MMM dd, yyyy');
+    } catch (e) {
+      return 'Invalid Date';
+    }
+  };
 
   const handleDelete = async (id: string) => {
     const result = await Swal.fire({
@@ -117,7 +170,7 @@ export default function PaperList() {
                 <tr>
                   <th className="px-6 py-4">Exam Info</th>
                   <th className="px-6 py-4">Assigned Session</th>
-                  <th className="px-6 py-4 text-center">Duration</th>
+                  <th className="px-6 py-4 text-center">Schedule</th>
                   <th className="px-6 py-4 text-center">Status</th>
                   <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
@@ -134,7 +187,7 @@ export default function PaperList() {
                          <div>
                             <p className="font-bold text-slate-700 leading-none mb-1">{exam.title}</p>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">
-                               Created: {exam.createdAt ? format(new Date(exam.createdAt), 'MMM dd, yyyy') : 'N/A'}
+                               Created: {safeFormatDate(exam.createdAt)}
                             </p>
                          </div>
                       </td>
@@ -143,16 +196,28 @@ export default function PaperList() {
                             {exam.sessionId ? (sessions[exam.sessionId] || 'Loading...') : 'Global'}
                          </span>
                       </td>
-                      <td className="px-6 py-4 text-center font-mono text-[11px] text-slate-500 font-bold">
-                         {exam.durationMinutes} MIN
+                      <td className="px-6 py-4">
+                         <div className="flex flex-col items-center gap-1">
+                            <span className="text-[10px] font-mono font-bold text-slate-500">{exam.durationMinutes} MIN</span>
+                            <div className="text-[9px] text-slate-400 font-medium">
+                               <p>Start: {exam.startTime || 'TBD'}</p>
+                               <p>End: {exam.endTime || 'TBD'}</p>
+                            </div>
+                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
                          <div className="flex flex-col items-center gap-1">
-                            <span className={`px-3 py-1 rounded text-[9px] font-black uppercase tracking-widest shadow-sm ${exam.status === 'published' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                            <span className={cn(
+                              "px-3 py-1 rounded text-[9px] font-black uppercase tracking-widest shadow-sm",
+                              exam.status === 'published' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                            )}>
                                 {exam.status === 'published' ? 'Active' : 'Closed'}
                             </span>
                             {exam.status === 'published' && (
-                               <span className={`text-[8px] font-bold ${exam.isLive ? 'text-green-500 animate-pulse' : 'text-slate-400 italic'}`}>
+                               <span className={cn(
+                                 "text-[8px] font-bold",
+                                 exam.isLive ? 'text-green-500 animate-pulse' : 'text-slate-400 italic'
+                               )}>
                                   {exam.isLive ? '● LIVE NOW' : 'Waiting for Start'}
                                </span>
                             )}
@@ -160,10 +225,20 @@ export default function PaperList() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-center gap-2">
+                          <button 
+                            onClick={() => handleEditTime(exam)}
+                            className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded shadow-sm transition-all active:scale-95"
+                            title="Edit Exam Timing"
+                          >
+                            <Clock className="w-3 h-3" />
+                          </button>
                           {exam.status === 'published' && (
                              <button 
                                onClick={() => toggleLive(exam)}
-                               className={`${exam.isLive ? 'bg-red-500' : 'bg-green-600'} text-white p-2 rounded shadow-sm transition-all active:scale-95`}
+                               className={cn(
+                                 "text-white p-2 rounded shadow-sm transition-all active:scale-95",
+                                 exam.isLive ? 'bg-red-500' : 'bg-green-600'
+                               )}
                                title={exam.isLive ? 'Stop Exam Session' : 'Start Exam Session Now'}
                              >
                                <Play className={cn("w-3 h-3", exam.isLive && "fill-current")} />
@@ -185,7 +260,10 @@ export default function PaperList() {
                           </button>
                           <button 
                             onClick={() => toggleStatus(exam)}
-                            className={`${exam.status === 'published' ? 'bg-[#f39c12]' : 'bg-[#00a65a]'} text-white p-2 rounded shadow-sm transition-all active:scale-95`}
+                            className={cn(
+                              "text-white p-2 rounded shadow-sm transition-all active:scale-95",
+                              exam.status === 'published' ? 'bg-[#f39c12]' : 'bg-[#00a65a]'
+                            )}
                             title={exam.status === 'published' ? 'Close Exam' : 'Publish Exam'}
                           >
                             {exam.status === 'published' ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}

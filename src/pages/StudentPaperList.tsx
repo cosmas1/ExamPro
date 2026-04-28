@@ -14,13 +14,25 @@ export default function StudentPaperList() {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [studentSessionId, setStudentSessionId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStudentSession = async () => {
-      if (!auth.currentUser) return;
-      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-      if (userDoc.exists()) {
-        setStudentSessionId(userDoc.data().sessionId || null);
+      if (!auth.currentUser) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+        if (userDoc.exists()) {
+          setStudentSessionId(userDoc.data().sessionId || '');
+        } else {
+          setStudentSessionId('');
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (!studentSessionId) setLoading(false); 
       }
     };
     fetchStudentSession();
@@ -28,6 +40,7 @@ export default function StudentPaperList() {
 
   useEffect(() => {
     if (studentSessionId === null) return;
+    setLoading(true);
 
     // Only show published exams for student's session
     const q = query(
@@ -38,8 +51,10 @@ export default function StudentPaperList() {
     
     const unsub = onSnapshot(q, (snap) => {
       setPapers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Paper)));
+      setLoading(false);
     }, (error) => {
       console.error("Firestore error in StudentPaperList:", error);
+      setLoading(false);
     });
     return () => unsub();
   }, [studentSessionId]);
@@ -106,32 +121,77 @@ export default function StudentPaperList() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredPapers.map((paper, idx) => (
-                      <tr key={paper.id} className="hover:bg-slate-50 transition-colors">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={6} className="p-12 text-center">
+                           <div className="flex flex-col items-center gap-2">
+                              <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fetching Assigned Papers...</span>
+                           </div>
+                        </td>
+                      </tr>
+                    ) : filteredPapers.map((paper, idx) => (
+                        <tr key={paper.id} className="hover:bg-slate-50 transition-colors">
                         <td className="p-3 border-r border-slate-200 text-center text-slate-500 font-medium">{idx + 1}</td>
                         <td className="p-3 border-r border-slate-200 font-medium text-slate-700">{paper.title}</td>
-                        <td className="p-3 border-r border-slate-200 text-slate-500">08/06/2020</td>
-                        <td className="p-3 border-r border-slate-200 text-slate-500">08/06/2025</td>
-                        <td className="p-3 border-r border-slate-200 text-center text-slate-500 font-bold">{paper.questionIds?.length || 0}</td>
+                        <td className="p-3 border-r border-slate-200 text-slate-500">{paper.startTime || 'N/A'}</td>
+                        <td className="p-3 border-r border-slate-200 text-slate-500">{paper.endTime || 'N/A'}</td>
+                        <td className="p-3 border-r border-slate-200 text-center text-slate-500 font-bold">{paper.totalQuestions || 0}</td>
                         <td className="p-3">
                           <div className="flex items-center gap-2">
-                             {paper.isLive ? (
-                               <button 
-                                 onClick={() => navigate(`/exam/${paper.id}`)}
-                                 className="bg-[#00c0ef] hover:bg-[#00acd6] text-white px-3 py-1.5 rounded flex items-center gap-1.5 font-bold transition-all active:scale-95 shadow-sm"
-                               >
-                                 <LogIn className="w-3.5 h-3.5" />
-                                 ATTEMPT PAPER
-                               </button>
-                             ) : (
-                               <button 
-                                 disabled
-                                 className="bg-slate-100 text-slate-400 cursor-not-allowed px-3 py-1.5 rounded flex items-center gap-1.5 font-bold border border-slate-200"
-                               >
-                                 <Clock className="w-3.5 h-3.5" />
-                                 WAITING TO START
-                               </button>
-                             )}
+                             {(() => {
+                               const now = new Date();
+                               const start = paper.startTime ? new Date(paper.startTime) : null;
+                               const end = paper.endTime ? new Date(paper.endTime) : null;
+                               
+                               const isTooEarly = start && now < start;
+                               const isTooLate = end && now > end;
+                               const isLive = paper.isLive && !isTooEarly && !isTooLate;
+
+                               if (isTooLate) {
+                                 return (
+                                   <button 
+                                     disabled
+                                     className="bg-red-50 text-red-400 cursor-not-allowed px-3 py-1.5 rounded flex items-center gap-1.5 font-bold border border-red-100"
+                                   >
+                                     EXAM CLOSED
+                                   </button>
+                                 );
+                               }
+
+                               if (isTooEarly) {
+                                 return (
+                                   <button 
+                                     disabled
+                                     className="bg-slate-50 text-slate-400 cursor-not-allowed px-3 py-1.5 rounded flex items-center gap-1.5 font-bold border border-slate-100"
+                                   >
+                                     COMING SOON
+                                   </button>
+                                 );
+                               }
+
+                               if (isLive) {
+                                 return (
+                                   <button 
+                                     onClick={() => navigate(`/exam/${paper.id}`)}
+                                     className="bg-[#00c0ef] hover:bg-[#00acd6] text-white px-3 py-1.5 rounded flex items-center gap-1.5 font-bold transition-all active:scale-95 shadow-sm"
+                                   >
+                                     <LogIn className="w-3.5 h-3.5" />
+                                     ATTEMPT PAPER
+                                   </button>
+                                 );
+                               }
+
+                               return (
+                                 <button 
+                                   disabled
+                                   className="bg-slate-100 text-slate-400 cursor-not-allowed px-3 py-1.5 rounded flex items-center gap-1.5 font-bold border border-slate-200"
+                                 >
+                                   <Clock className="w-3.5 h-3.5" />
+                                   WAITING TO START
+                                 </button>
+                               );
+                             })()}
                              <button 
                                onClick={() => navigate('/results')}
                                className="bg-[#00a65a] hover:bg-[#008d4c] text-white px-3 py-1.5 rounded flex items-center gap-1.5 font-bold transition-all active:scale-95 shadow-sm"

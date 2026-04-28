@@ -95,6 +95,19 @@ export default function ExamInterface() {
         return;
       }
       const examData = { id: examDoc.id, ...examDoc.data() } as Exam;
+      
+      const now = new Date();
+      if (examData.startTime && now < new Date(examData.startTime)) {
+        Swal.fire('Too Early', `This exam starts at ${examData.startTime}`, 'info');
+        navigate('/papers');
+        return;
+      }
+      if (examData.endTime && now > new Date(examData.endTime)) {
+        Swal.fire('Exam Closed', `This exam ended at ${examData.endTime}`, 'error');
+        navigate('/papers');
+        return;
+      }
+
       setExam(examData);
 
       // 2. Fetch Questions
@@ -133,7 +146,6 @@ export default function ExamInterface() {
 
       // 4. Setup Timer
       const startTime = new Date(currentSub.startTime);
-      const now = new Date();
       const elapsedSeconds = differenceInSeconds(now, startTime);
       const totalSeconds = examData.durationMinutes * 60;
       const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);

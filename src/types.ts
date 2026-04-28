@@ -26,17 +26,24 @@ export interface Exam {
   status: ExamStatus;
   sessionId?: string;
   isLive?: boolean;
+  startTime?: string;
+  endTime?: string;
+  settings?: any;
 }
 
 export interface Paper {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   durationMinutes: number;
   totalMarks: number;
+  totalQuestions?: number;
   status: ExamStatus;
   questionIds?: string[];
   isLive?: boolean;
+  startTime?: string;
+  endTime?: string;
+  sessionId?: string;
 }
 
 export interface Question {
