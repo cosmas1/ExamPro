@@ -83,19 +83,12 @@ export default function Landing() {
 
       // If not an email, assume it's an Admission Number
       if (!userInput.includes('@')) {
-        const q = query(collection(db, 'users'), where('admissionNumber', '==', userInput.trim()));
-        const querySnapshot = await getDocs(q);
-        
-        if (querySnapshot.empty) {
-          // Fallback to direct lookup if needed for old records, or fail
-          const lookupDoc = await getDoc(doc(db, 'admission_to_email', userInput.trim()));
-          if (!lookupDoc.exists()) {
-            throw new Error('Invalid Admission Number or Email');
-          }
-          email = lookupDoc.data().email;
-        } else {
-          email = querySnapshot.docs[0].data().email;
+        const sanitizedAdmission = userInput.trim().replace(/\//g, '_');
+        const lookupDoc = await getDoc(doc(db, 'admission_to_email', sanitizedAdmission));
+        if (!lookupDoc.exists()) {
+          throw new Error('Invalid Admission Number or Email');
         }
+        email = lookupDoc.data().email;
       }
 
       const fUser = await signInWithEmail(email, password);

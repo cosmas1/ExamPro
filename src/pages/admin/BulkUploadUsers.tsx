@@ -124,7 +124,8 @@ export default function BulkUploadUsers() {
 
             // 2.1 Create Lookup for admission number
             if (regNum) {
-              await setDoc(doc(db, 'admission_to_email', regNum), {
+              const sanitizedRegNum = regNum.toString().trim().replace(/\//g, '_');
+              await setDoc(doc(db, 'admission_to_email', sanitizedRegNum), {
                 email: email,
                 uid: user.uid
               });

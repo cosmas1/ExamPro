@@ -69,7 +69,8 @@ export default function AddUser() {
 
       // 2.1 Create Lookup Document for Login with Admission Number
       if (formData.admissionNumber.trim()) {
-        await setDoc(doc(db, 'admission_to_email', formData.admissionNumber.trim()), {
+        const sanitizedAdmission = formData.admissionNumber.trim().replace(/\//g, '_');
+        await setDoc(doc(db, 'admission_to_email', sanitizedAdmission), {
           email: formData.email.trim().toLowerCase(),
           uid: user.uid
         });

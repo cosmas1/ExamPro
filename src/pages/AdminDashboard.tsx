@@ -16,6 +16,7 @@ import { cn } from '../lib/utils';
 import { auth } from '../firebase';
 
 import AdminLayout from '../components/AdminLayout';
+import AdminDataRepair from '../components/AdminDataRepair';
 
 export default function AdminDashboard() {
   const [exams, setExams] = useState<Exam[]>([]);
@@ -119,6 +120,7 @@ export default function AdminDashboard() {
 
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         <div className="max-w-7xl mx-auto space-y-6">
+          {user?.role === 'admin' && <AdminDataRepair />}
           {/* Stats Boxes */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat, i) => (
