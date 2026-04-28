@@ -348,7 +348,7 @@ export default function BulkQuestionUpload() {
           </div>
 
           <footer className="pt-8 border-t border-slate-200 flex justify-between items-center text-[11px] text-slate-500 pb-10">
-            <p className="tracking-tight uppercase">Copyright © <span className="font-bold">PaperShala</span>. Developed by <span className="text-[#3c8dbc] font-bold">G Technologies</span>.</p>
+            <p className="tracking-tight uppercase">Copyright © <span className="font-bold">G Tech Exams</span>. Developed by <span className="text-[#3c8dbc] font-bold">G Technologies</span>.</p>
             <p className="font-bold">Version <span className="font-normal">6.9.5</span></p>
           </footer>
         </div>

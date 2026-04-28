@@ -58,6 +58,56 @@ export default function Categories() {
     }
   };
 
+  const editCategory = async (cat: Category) => {
+    const { value: name } = await Swal.fire({
+      title: 'Edit Category',
+      input: 'text',
+      inputLabel: 'Category Name',
+      inputValue: cat.name,
+      showCancelButton: true
+    });
+
+    if (name) {
+      await updateDoc(doc(db, 'categories', cat.id), { name });
+      Swal.fire('Updated', 'Category name changed', 'success');
+    }
+  };
+
+  const editSubCategory = async (sub: SubCategory) => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Edit Sub Category',
+      html: `
+        <div class="space-y-4 text-left p-2">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Name</label>
+            <input id="swal-subname" type="text" class="w-full p-2 border rounded" value="${sub.name}">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Price</label>
+            <input id="swal-subprice" type="number" class="w-full p-2 border rounded" value="${sub.price}">
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      preConfirm: () => {
+        return {
+          name: (document.getElementById('swal-subname') as HTMLInputElement).value,
+          price: (document.getElementById('swal-subprice') as HTMLInputElement).value
+        }
+      }
+    });
+
+    if (formValues) {
+      await updateDoc(doc(db, 'subcategories', sub.id), {
+        name: formValues.name,
+        price: Number(formValues.price),
+        isFree: Number(formValues.price) === 0
+      });
+      Swal.fire('Updated', 'Subcategory updated', 'success');
+    }
+  };
+
   const deleteCategory = async (id: string) => {
     const result = await Swal.fire({
       title: 'Are you sure?',
@@ -149,7 +199,12 @@ export default function Categories() {
                           </td>
                           <td className="p-3">
                             <div className="flex justify-end gap-1">
-                               <button className="p-1.5 bg-[#00c0ef] text-white rounded hover:opacity-80 transition-opacity"><Edit2 className="w-3 h-3" /></button>
+                               <button 
+                                 onClick={() => editCategory(cat)}
+                                 className="p-1.5 bg-[#00c0ef] text-white rounded hover:opacity-80 transition-opacity"
+                               >
+                                 <Edit2 className="w-3 h-3" />
+                               </button>
                                <button onClick={() => deleteCategory(cat.id)} className="p-1.5 bg-[#dd4b39] text-white rounded hover:opacity-80 transition-opacity"><Trash2 className="w-3 h-3" /></button>
                             </div>
                           </td>
@@ -246,7 +301,12 @@ export default function Categories() {
                             </td>
                             <td className="p-3">
                               <div className="flex justify-end gap-1">
-                                 <button className="p-1.5 bg-[#00c0ef] text-white rounded hover:opacity-80 transition-opacity"><Edit2 className="w-3 h-3" /></button>
+                                 <button 
+                                   onClick={() => editSubCategory(sub)}
+                                   className="p-1.5 bg-[#00c0ef] text-white rounded hover:opacity-80 transition-opacity"
+                                 >
+                                   <Edit2 className="w-3 h-3" />
+                                 </button>
                                  <button onClick={async () => {
                                    if ((await Swal.fire({ title: 'Delete?', showCancelButton: true })).isConfirmed) {
                                      await deleteDoc(doc(db, 'subcategories', sub.id));

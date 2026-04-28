@@ -23,6 +23,7 @@ import Categories from './pages/admin/Categories';
 import BulkQuestionUpload from './pages/admin/BulkQuestionUpload';
 import DirectAddQuestion from './pages/admin/DirectAddQuestion';
 import QuestionList from './pages/admin/QuestionList';
+import Documentation from './pages/admin/Documentation';
 import ExamResults from './pages/admin/ExamResults';
 import StudentPaperList from './pages/StudentPaperList';
 import StudentResults from './pages/StudentResults';
@@ -65,6 +66,7 @@ function AppRoutes() {
       
       {/* Admin/Teacher Routes */}
       <Route path="/admin" element={<ProtectedRoute role={['admin', 'teacher']}><AdminDashboard /></ProtectedRoute>} />
+      <Route path="/admin/documentation" element={<ProtectedRoute role={['admin', 'teacher']}><Documentation /></ProtectedRoute>} />
       <Route path="/admin/questions" element={<ProtectedRoute role={['admin', 'teacher']}><QuestionList /></ProtectedRoute>} />
       <Route path="/admin/questions/new" element={<ProtectedRoute role={['admin', 'teacher']}><AddQuestion /></ProtectedRoute>} />
       <Route path="/admin/papers" element={<ProtectedRoute role={['admin', 'teacher']}><PaperList /></ProtectedRoute>} />

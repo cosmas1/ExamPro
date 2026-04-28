@@ -8,6 +8,7 @@ export interface AppUser {
   createdAt: string;
   registrationNumber?: string;
   admissionNumber?: string;
+  sessionId?: string;
   activeSessionId?: string;
   group?: string;
 }
@@ -64,6 +65,7 @@ export interface Question {
   explanation?: string;
   order?: number;
   points?: number;
+  marks?: number;
 }
 
 export interface Submission {
@@ -93,6 +95,8 @@ export interface SubCategory {
   details?: string;
   totalQuestions: number;
   status: 'Active' | 'Inactive';
+  isFree?: boolean;
+  price?: number;
 }
 
 export enum OperationType {

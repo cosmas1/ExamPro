@@ -34,8 +34,7 @@ export default function AdminLayout({ children, activeMenu, activeSubMenu }: Adm
   };
 
   const menuItems = [
-    { label: 'How to Start - Easy Guide', icon: Plus },
-    { label: 'Special offer for you', icon: Bell },
+    { label: 'How to Start - Easy Guide', icon: Plus, action: () => navigate('/admin/documentation'), active: location.pathname === '/admin/documentation' },
     { label: 'Dashboard', icon: LayoutGrid, action: () => navigate('/admin'), active: location.pathname === '/admin' },
     { 
       label: 'Questions', 
@@ -74,11 +73,11 @@ export default function AdminLayout({ children, activeMenu, activeSubMenu }: Adm
         { label: 'Bulk Upload Users', icon: List, action: () => navigate('/admin/users/bulk'), active: location.pathname === '/admin/users/bulk' },
       ]
     },
-    { label: 'Sub Admins', icon: AlertCircle, expandable: true, action: () => Swal.fire('Info', 'Sub-admin management is an enterprise feature.', 'info') },
+    { label: 'Sub Admins', icon: AlertCircle, expandable: true, action: () => Swal.fire('Coming Soon', 'Sub-admin management is coming soon.', 'info') },
     { label: 'Sessions', icon: Share2, action: () => navigate('/admin/sessions'), active: location.pathname === '/admin/sessions' },
     { label: 'Categories', icon: BookOpen, action: () => navigate('/admin/categories'), active: location.pathname === '/admin/categories' },
     { label: 'Notifications', icon: Bell, action: () => navigate('/admin/notifications') },
-    { label: 'Profile', icon: Settings, action: () => Swal.fire('Info', 'Admin profile editing is coming in the next update.', 'info') },
+    { label: 'Profile', icon: Settings, action: () => Swal.fire('Coming Soon', 'Admin profile editing is coming soon.', 'info') },
     { label: 'Log out', icon: LogOut, action: () => auth.signOut() },
   ];
 
@@ -154,7 +153,6 @@ export default function AdminLayout({ children, activeMenu, activeSubMenu }: Adm
             <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="hover:bg-[#367fa9] p-1.5 rounded transition-colors">
               <Menu className="w-5 h-5" />
             </button>
-            <span className="text-xs font-bold opacity-70">ta</span>
           </div>
           <div className="flex items-center gap-3">
              <div className="flex items-center gap-2 px-3 py-1 hover:bg-[#367fa9] rounded cursor-pointer transition-colors group">

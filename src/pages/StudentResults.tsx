@@ -35,9 +35,9 @@ export default function StudentResults() {
       // Mocking some data if collection is empty for demonstration as per user screenshots
       if (snap.empty) {
         setResults([
-          { id: '1', paperName: 'Class Test by Goyal Sir', attemptDate: '23/04/2020', result: 'Pass', marks: 80, totalMarks: 100, percentage: 80 },
-          { id: '2', paperName: 'Class Test by Arun Sir', attemptDate: '23/04/2020', result: 'Fail', marks: 4, totalMarks: 10, percentage: 40 },
-          { id: '3', paperName: 'Internship Hire Exam', attemptDate: '23/04/2020', result: 'Pass', marks: 6, totalMarks: 10, percentage: 60 },
+          { id: '1', paperName: 'Foundation Course - Weekly Test', attemptDate: '23/04/2026', result: 'Pass', marks: 80, totalMarks: 100, percentage: 80 },
+          { id: '2', paperName: 'Mathematics Midterm - Prep', attemptDate: '23/04/2026', result: 'Fail', marks: 4, totalMarks: 10, percentage: 40 },
+          { id: '3', paperName: 'Computer Science Practical', attemptDate: '24/04/2026', result: 'Pass', marks: 6, totalMarks: 10, percentage: 60 },
         ]);
         return;
       }

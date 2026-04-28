@@ -122,6 +122,14 @@ export default function BulkUploadUsers() {
               createdAt: serverTimestamp(),
             });
 
+            // 2.1 Create Lookup for admission number
+            if (regNum) {
+              await setDoc(doc(db, 'admission_to_email', regNum), {
+                email: email,
+                uid: user.uid
+              });
+            }
+
             // 3. Sign out secondary app
             await signOut(secondaryAuth);
             successCount++;

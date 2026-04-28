@@ -83,24 +83,18 @@ export default function Landing() {
 
       // If not an email, assume it's an Admission Number
       if (!userInput.includes('@')) {
-        const q = query(collection(db, 'users'), where('admissionNumber', '==', userInput));
-        const snap = await getDocs(q);
-        if (snap.empty) {
+        const lookupDoc = await getDoc(doc(db, 'admission_to_email', userInput.trim()));
+        if (!lookupDoc.exists()) {
           throw new Error('Invalid Admission Number or Email');
         }
-        email = snap.docs[0].data().email;
+        email = lookupDoc.data().email;
       }
 
-      await signInWithEmail(email, password);
+      const fUser = await signInWithEmail(email, password);
       
-      // Get role for redirect
-      if (!email) {
-        throw new Error('User email not found in system records');
-      }
-      
-      const q = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
-      const snap = await getDocs(q);
-      const role = snap.docs[0]?.data()?.role || 'student';
+      // Get role for redirect using UID (getDoc is allowed for self)
+      const userDoc = await getDoc(doc(db, 'users', fUser.uid));
+      const role = userDoc.data()?.role || 'student';
 
       Swal.close();
       navigate(role === 'admin' ? '/admin' : '/dashboard');

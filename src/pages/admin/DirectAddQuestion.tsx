@@ -404,7 +404,7 @@ export default function DirectAddQuestion() {
           </div>
 
           <footer className="mt-12 mb-10 text-[11px] text-slate-500 flex justify-between border-t border-slate-200 pt-6 uppercase tracking-tight">
-             <p>Copyright © <span className="font-bold">PaperShala</span>. Developed by <span className="text-[#3c8dbc] font-bold">G Tech</span>.</p>
+             <p>Copyright © <span className="font-bold">G Tech Exams</span>. Developed by <span className="text-[#3c8dbc] font-bold">G Tech</span>.</p>
              <p className="font-bold">Version <span className="font-normal">1.2.0</span></p>
           </footer>
         </div>

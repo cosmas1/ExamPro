@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, Edit3, Trash2, LayoutGrid, Minus, X, AlertCircle
 } from 'lucide-react';
-import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import AdminLayout from '../../components/AdminLayout';
 import Swal from 'sweetalert2';
@@ -65,6 +65,44 @@ export default function Sessions() {
         Swal.fire('Deleted!', 'Session has been deleted.', 'success');
       } catch (err) {
         Swal.fire('Error', 'Failed to delete session', 'error');
+      }
+    }
+  };
+
+  const handleEdit = async (session: Session) => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Edit Session',
+      html: `
+        <div class="space-y-4 text-left p-2">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Session Name</label>
+            <input id="swal-name" type="text" class="w-full p-2 border rounded" value="${session.name}">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Description</label>
+            <input id="swal-desc" type="text" class="w-full p-2 border rounded" value="${session.description || ''}">
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      preConfirm: () => {
+        return {
+          name: (document.getElementById('swal-name') as HTMLInputElement).value,
+          description: (document.getElementById('swal-desc') as HTMLInputElement).value
+        }
+      }
+    });
+
+    if (formValues) {
+      try {
+        await updateDoc(doc(db, 'sessions', session.id), {
+          name: formValues.name,
+          description: formValues.description
+        });
+        Swal.fire('Updated!', 'Session has been updated.', 'success');
+      } catch (e) {
+        Swal.fire('Error', 'Failed to update session.', 'error');
       }
     }
   };
@@ -184,11 +222,18 @@ export default function Sessions() {
                         </td>
                         <td className="p-3">
                           <div className="flex items-center justify-center gap-1.5">
-                            <button className="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
+                            <button 
+                              onClick={() => handleEdit(session)}
+                              className="p-1.5 text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
                             <button 
                               onClick={() => handleDelete(session.id, session.name)}
                               className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors"
-                            ><Trash2 className="w-3.5 h-3.5" /></button>
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </td>
                       </tr>

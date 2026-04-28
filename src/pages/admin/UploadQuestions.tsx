@@ -195,9 +195,9 @@ export default function UploadQuestions() {
                 </div>
 
                 {/* Warning Section */}
-                <div className="lg:w-1/2 bg-[#dd4b39] text-white p-6 rounded relative overflow-hidden">
+                <div className="lg:w-1/2 bg-[#3c8dbc] text-white p-6 rounded relative overflow-hidden">
                    <div className="relative z-10">
-                     <p className="text-sm">If you purchased questions (paper set) from PaperShala and want to upload these questions in your exam paper then this page help you.</p>
+                     <p className="text-sm">Upload purchased question sets directly to your exam papers for rapid deployment.</p>
                      <p className="mt-4 text-sm font-bold">Please note: <span className="font-normal text-xs">Question selection mode must be manual & Exam paper should be disabled before adding Questions.</span></p>
                    </div>
                 </div>
@@ -205,13 +205,13 @@ export default function UploadQuestions() {
             </div>
 
             {/* Note Section */}
-            <div className="bg-[#dd4b39] text-white p-6 rounded font-bold text-sm italic">
-              Please Note! <span className="font-normal not-italic text-xs">This is demo version. Every detail which you add/edit will reset after every 45 mintues. Please call us at +91 89638 11371 for any query.</span>
+            <div className="bg-[#00a65a] text-white p-6 rounded font-bold text-sm italic">
+              Please Note! <span className="font-normal not-italic text-xs">All data is securely stored in your private institution cloud. For technical support, please contact your system administrator.</span>
             </div>
 
             <footer className="pt-8 border-t border-slate-200 flex justify-between items-center text-[11px] text-slate-500">
-              <p>Copyright © <span className="font-bold">PaperShala</span>. Developed by <span className="text-[#3c8dbc] font-bold">G Technologies</span>.</p>
-              <p className="font-bold">Version <span className="font-normal">6.9.5</span></p>
+              <p>Copyright © <span className="font-bold">G Tech Exams</span>. Developed by <span className="text-[#3c8dbc] font-bold">G Technologies</span>.</p>
+              <p className="font-bold">Version <span className="font-normal">1.0.0</span></p>
             </footer>
           </div>
         </div>

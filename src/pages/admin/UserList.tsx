@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, doc, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, deleteDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../hooks/useAuth';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { AppUser as User } from '../../types';
 import AdminLayout from '../../components/AdminLayout';
-import { Trash2, Key, Filter, Search } from 'lucide-react';
+import { Trash2, Key, Filter, Search, Edit2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 interface Session {
@@ -64,6 +64,54 @@ export default function UserList() {
       Swal.fire('Success', `Reset link sent to ${email}`, 'success');
     } catch (err: any) {
       Swal.fire('Error', err.message, 'error');
+    }
+  };
+
+  const handleEdit = async (u: User) => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Edit User Info',
+      html: `
+        <div class="space-y-4 text-left p-2">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Full Name</label>
+            <input id="swal-name" type="text" class="w-full p-2 border rounded" value="${u.name}">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">System Role</label>
+            <select id="swal-role" class="w-full p-2 border rounded">
+              <option value="student" ${u.role === 'student' ? 'selected' : ''}>Student</option>
+              <option value="teacher" ${u.role === 'teacher' ? 'selected' : ''}>Teacher</option>
+              <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Session ID</label>
+            <input id="swal-session" type="text" class="w-full p-2 border rounded" value="${u.sessionId || ''}" placeholder="Paste Session ID here">
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      preConfirm: () => {
+        return {
+          name: (document.getElementById('swal-name') as HTMLInputElement).value,
+          role: (document.getElementById('swal-role') as HTMLSelectElement).value,
+          sessionId: (document.getElementById('swal-session') as HTMLInputElement).value
+        }
+      }
+    });
+
+    if (formValues) {
+      try {
+        await updateDoc(doc(db, 'users', u.uid), {
+          name: formValues.name,
+          role: formValues.role,
+          sessionId: formValues.sessionId
+        });
+        Swal.fire('Updated!', 'User records have been modified.', 'success');
+      } catch (e) {
+        Swal.fire('Error', 'Failed to update user.', 'error');
+      }
     }
   };
 
@@ -145,6 +193,13 @@ export default function UserList() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-center gap-2">
+                          <button 
+                            onClick={() => handleEdit(u)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded shadow-sm transition-all active:scale-95"
+                            title="Edit User Info"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
                           <button 
                             onClick={() => handleResetPassword(u.email!)}
                             className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded shadow-sm transition-all active:scale-95"

@@ -76,6 +76,10 @@ service cloud.firestore {
       allow update: if (isSignedIn() && request.auth.uid == userId) || isStaff();
       allow delete: if isAdmin();
     }
+
+    match /admission_to_email/{admissionId} {
+      allow get: if true;
+    }
     
     match /sessions/{sessionId} {
       allow read: if isSignedIn();

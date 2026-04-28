@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { 
   CheckCircle2, RefreshCw, Trophy, AlertCircle, LayoutGrid, Minus, X
 } from 'lucide-react';
@@ -11,43 +12,65 @@ import {
 import StudentLayout from '../components/StudentLayout';
 import { cn } from '../lib/utils';
 
-const graphData = [
-  { name: 'P1', percentage: 60 },
-  { name: 'P2', percentage: 40 },
-  { name: 'P3', percentage: 80 },
-];
-
 export default function StudentDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [stats, setStats] = useState([
-    { label: 'Papers Need to Attempt', value: '3', color: 'bg-[#00c0ef]', icon: CheckCircle2, link: '/papers' },
-    { label: 'Exam ongoing (pending)', value: '0', color: 'bg-[#f39c12]', icon: RefreshCw, link: '/papers' },
-    { label: 'Exam Paper Passed', value: '0', color: 'bg-[#00a65a]', icon: Trophy, link: '/results' },
-    { label: 'Exam Paper Failed', value: '0', color: 'bg-[#dd4b39]', icon: AlertCircle, link: '/results' },
+    { label: 'Papers to Attempt', value: '0', color: 'bg-[#00c0ef]', icon: CheckCircle2, link: '/papers' },
+    { label: 'Ongoing Exames', value: '0', color: 'bg-[#f39c12]', icon: RefreshCw, link: '/papers' },
+    { label: 'Papers Passed', value: '0', color: 'bg-[#00a65a]', icon: Trophy, link: '/results' },
+    { label: 'Papers Failed', value: '0', color: 'bg-[#dd4b39]', icon: AlertCircle, link: '/results' },
   ]);
+  const [dynamicGraphData, setDynamicGraphData] = useState<{name: string, percentage: number}[]>([]);
 
   useEffect(() => {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser || !user) return;
     
-    // In a real app we'd fetch actual counts
-    // For now, mirroring requested look with live updates potential
-    const q = query(collection(db, 'submissions'), where('userId', '==', auth.currentUser.uid));
-    const unsub = onSnapshot(q, (snap) => {
-      const docs = snap.docs.map(d => d.data());
-      const passed = docs.filter(d => d.score >= (d.totalPossibleScore * 0.5)).length;
-      const failed = docs.filter(d => d.score < (d.totalPossibleScore * 0.5)).length;
-      
-      setStats(prev => [
-        prev[0],
-        prev[1],
-        { ...prev[2], value: passed.toString() },
-        { ...prev[3], value: failed.toString() },
-      ]);
-    }, (error) => {
-      console.error("Submissions snapshot error:", error);
+    // Fetch user's session papers count
+    const qPapers = query(
+      collection(db, 'exams'), 
+      where('status', '==', 'published'),
+      where('sessionId', '==', user.sessionId || '')
+    );
+    
+    const unsubPapers = onSnapshot(qPapers, (snap) => {
+      setStats(prev => {
+        const next = [...prev];
+        next[0] = { ...next[0], value: snap.size.toString() };
+        return next;
+      });
     });
-    return () => unsub();
-  }, []);
+
+    // Fetch submissions for passed/failed and graph
+    const qSubmissions = query(collection(db, 'submissions'), where('userId', '==', auth.currentUser.uid));
+    const unsubSubmissions = onSnapshot(qSubmissions, (snap) => {
+      const docs = snap.docs.map(d => d.data());
+      const passed = docs.filter(d => (d.score || 0) >= ((d.totalPossibleScore || 1) * 0.5)).length;
+      const failed = docs.filter(d => (d.score || 0) < ((d.totalPossibleScore || 1) * 0.5)).length;
+      
+      setStats(prev => {
+        const next = [...prev];
+        next[2] = { ...next[2], value: passed.toString() };
+        next[3] = { ...next[3], value: failed.toString() };
+        return next;
+      });
+
+      // Prepare graph data (last 7 papers)
+      const graphPoints = docs
+        .sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime())
+        .slice(-7)
+        .map((d, idx) => ({
+          name: `P${idx + 1}`,
+          percentage: Math.round(((d.score || 0) / (d.totalPossibleScore || 1)) * 100)
+        }));
+      setDynamicGraphData(graphPoints);
+    });
+
+    return () => {
+      unsubPapers();
+      unsubSubmissions();
+    };
+  }, [user]);
 
   return (
     <StudentLayout activeMenu="Dashboard">
@@ -68,7 +91,7 @@ export default function StudentDashboard() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat, i) => (
-            <div key={i} className={cn("rounded shadow-sm overflow-hidden flex flex-col relative", stat.color)}>
+            <div key={i} className={cn("rounded shadow-sm overflow-hidden flex flex-col relative transition-transform hover:scale-[1.02]", stat.color)}>
                <div className="p-4 relative z-10">
                   <h3 className="text-3xl font-bold text-white mb-1">{stat.value}</h3>
                   <p className="text-white/90 text-sm font-normal">{stat.label}</p>
@@ -98,7 +121,7 @@ export default function StudentDashboard() {
           <div className="p-6">
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={graphData}>
+                <LineChart data={dynamicGraphData.length > 0 ? dynamicGraphData : [{name: 'No Data', percentage: 0}]}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
                   <XAxis 
                     dataKey="name" 
@@ -128,9 +151,13 @@ export default function StudentDashboard() {
             </div>
             
             <div className="mt-4 pt-4 border-t border-slate-50 flex flex-wrap gap-x-6 gap-y-2 text-[11px] text-slate-500 font-medium">
-               <span>P1 = Paper 1</span>
-               <span>P2 = Paper 2</span>
-               <span>P3 = Paper 3</span>
+               {dynamicGraphData.length > 0 ? (
+                 dynamicGraphData.map((d, i) => (
+                   <span key={i}>{d.name} = Paper {i + 1}</span>
+                 ))
+               ) : (
+                 <span>Complete assessments to see your growth trend here.</span>
+               )}
             </div>
           </div>
         </div>

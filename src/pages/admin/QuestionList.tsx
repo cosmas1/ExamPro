@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, doc, deleteDoc, orderBy } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, deleteDoc, orderBy, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Question, Category, SubCategory } from '../../types';
 import AdminLayout from '../../components/AdminLayout';
@@ -57,6 +57,90 @@ export default function QuestionList() {
     if (result.isConfirmed) {
       await deleteDoc(doc(db, 'questions', id));
       Swal.fire('Deleted!', 'Question removed successfully.', 'success');
+    }
+  };
+
+  const handleEdit = async (question: any) => {
+    const isMCQ = question.type?.toLowerCase().includes('mcq') || question.type === 'Multiple Choice Single Answer';
+    
+    let optionsHtml = '';
+    if (isMCQ && question.options) {
+      optionsHtml = `
+        <div class="mt-4 space-y-2">
+          <label class="block text-xs font-bold uppercase text-slate-500">Options</label>
+          ${question.options.map((opt: string, i: number) => `
+            <div class="flex gap-2">
+              <span class="bg-slate-100 px-2 flex items-center rounded text-xs font-bold">${String.fromCharCode(65 + i)}</span>
+              <input id="swal-opt-${i}" type="text" class="flex-1 p-2 border rounded text-sm" value="${opt}">
+            </div>
+          `).join('')}
+          <div class="mt-2">
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Correct Answer</label>
+            <input id="swal-correct" type="text" class="w-full p-2 border rounded text-sm" value="${question.correctOption || question.correctAnswer || ''}" placeholder="Enter correct text or option letter">
+          </div>
+        </div>
+      `;
+    }
+
+    const { value: formValues } = await Swal.fire({
+      title: 'Edit Question',
+      width: '600px',
+      html: `
+        <div class="space-y-4 text-left p-2">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Question Text</label>
+            <textarea id="swal-text" class="w-full p-2 border rounded" rows="3">${question.questionText || question.text}</textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Level</label>
+              <select id="swal-level" class="w-full p-2 border rounded">
+                <option value="Simple" ${question.level === 'Simple' ? 'selected' : ''}>Simple</option>
+                <option value="Moderate" ${question.level === 'Moderate' ? 'selected' : ''}>Moderate</option>
+                <option value="Hard" ${question.level === 'Hard' ? 'selected' : ''}>Hard</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Marks</label>
+              <input id="swal-marks" type="number" class="w-full p-2 border rounded" value="${question.marks || 1}">
+            </div>
+          </div>
+          ${optionsHtml}
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      preConfirm: () => {
+        const result: any = {
+          questionText: (document.getElementById('swal-text') as HTMLTextAreaElement).value,
+          level: (document.getElementById('swal-level') as HTMLSelectElement).value,
+          marks: Number((document.getElementById('swal-marks') as HTMLInputElement).value)
+        };
+        if (isMCQ) {
+          result.options = question.options.map((_: any, i: number) => (document.getElementById(`swal-opt-${i}`) as HTMLInputElement).value);
+          result.correctOption = (document.getElementById('swal-correct') as HTMLInputElement).value;
+        }
+        return result;
+      }
+    });
+
+    if (formValues) {
+      try {
+        const updateData: any = {
+          questionText: formValues.questionText,
+          level: formValues.level,
+          marks: formValues.marks
+        };
+        if (isMCQ) {
+          updateData.options = formValues.options;
+          updateData.correctOption = formValues.correctOption;
+        }
+
+        await updateDoc(doc(db, 'questions', question.id!), updateData);
+        Swal.fire('Updated!', 'Question has been updated.', 'success');
+      } catch (e) {
+        Swal.fire('Error', 'Failed to update question.', 'error');
+      }
     }
   };
 
@@ -146,6 +230,7 @@ export default function QuestionList() {
                       <td className="px-6 py-4">
                         <div className="flex justify-center gap-2">
                           <button 
+                            onClick={() => handleEdit(q)}
                             className="bg-[#00c0ef] hover:bg-[#00acd6] text-white p-2 rounded shadow-sm transition-all active:scale-95"
                             title="Edit Question"
                           >

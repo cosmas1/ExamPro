@@ -34,8 +34,8 @@ export default function DetailedResult() {
   ];
 
   const overviewRows = [
-    { label: 'Paper Name', value: 'Class Test by Goyal Sir' },
-    { label: 'Paper Category', value: 'Basic Paper (Instant Automatic Result)' },
+    { label: 'Paper Name', value: 'Quarterly Assessment - Term 1' },
+    { label: 'Paper Category', value: 'Standard Assessment (Automated)' },
     { label: 'Paper Start Date', value: '23/04/2020' },
     { label: 'Paper End Date', value: '24/04/2020' },
     { label: 'Paper Attempt Date', value: '23/04/2020' },

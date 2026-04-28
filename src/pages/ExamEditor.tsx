@@ -180,13 +180,15 @@ export default function ExamEditor() {
     const newQs = [...questions];
     
     toAdd.forEach(bq => {
-      // Check if already in current questions to avoid duplicates if needed, but usually it's fine
       const newQ: Question = {
-        ...bq,
-        id: Math.random().toString(36).substring(7), // New ID for the exam instance
+        id: Math.random().toString(36).substring(7),
         examId: examId || '',
         order: newQs.length + 1,
-        text: (bq as any).questionText || bq.text // Handle different naming if any
+        text: (bq as any).questionText || bq.text,
+        type: bq.type || 'MCQ',
+        options: bq.options || [],
+        correctAnswer: (bq as any).correctOption || bq.correctAnswer || '',
+        marks: bq.marks || 1
       };
       newQs.push(newQ);
     });
@@ -532,7 +534,10 @@ export default function ExamEditor() {
 
             <div className="flex-1 overflow-y-auto p-6 space-y-3">
               {bankQuestions
-                .filter(q => ((bq: any) => (bq.questionText || bq.text || '').toLowerCase().includes(bankSearch.toLowerCase()))(q))
+                .filter(q => {
+                  const text = (q as any).questionText || (q as any).text || '';
+                  return text.toLowerCase().includes(bankSearch.toLowerCase());
+                })
                 .map(q => (
                   <label 
                     key={q.id} 

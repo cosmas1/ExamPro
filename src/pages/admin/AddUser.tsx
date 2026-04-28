@@ -67,6 +67,14 @@ export default function AddUser() {
         createdAt: serverTimestamp(),
       });
 
+      // 2.1 Create Lookup Document for Login with Admission Number
+      if (formData.admissionNumber.trim()) {
+        await setDoc(doc(db, 'admission_to_email', formData.admissionNumber.trim()), {
+          email: formData.email.trim().toLowerCase(),
+          uid: user.uid
+        });
+      }
+
       // 3. Sign out from secondary app to clean up
       await signOut(secondaryAuth);
 
