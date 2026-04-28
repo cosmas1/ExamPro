@@ -26,7 +26,7 @@ export default function AddUser() {
     lastName: '',
     admissionNumber: '',
     email: '',
-    password: '123123',
+    password: '123',
     sessionId: '',
     role: 'student' as UserRole
   });
@@ -171,7 +171,7 @@ export default function AddUser() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Password (Default: 123123)</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Password (Default: 123)</label>
                   <input 
                     type="password" 
                     className="w-full border border-slate-200 rounded px-3 py-2 text-sm focus:border-[#3c8dbc] outline-none"

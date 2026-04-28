@@ -83,11 +83,19 @@ export default function Landing() {
 
       // If not an email, assume it's an Admission Number
       if (!userInput.includes('@')) {
-        const lookupDoc = await getDoc(doc(db, 'admission_to_email', userInput.trim()));
-        if (!lookupDoc.exists()) {
-          throw new Error('Invalid Admission Number or Email');
+        const q = query(collection(db, 'users'), where('admissionNumber', '==', userInput.trim()));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+          // Fallback to direct lookup if needed for old records, or fail
+          const lookupDoc = await getDoc(doc(db, 'admission_to_email', userInput.trim()));
+          if (!lookupDoc.exists()) {
+            throw new Error('Invalid Admission Number or Email');
+          }
+          email = lookupDoc.data().email;
+        } else {
+          email = querySnapshot.docs[0].data().email;
         }
-        email = lookupDoc.data().email;
       }
 
       const fUser = await signInWithEmail(email, password);
@@ -223,7 +231,7 @@ export default function Landing() {
                   <Shield className="w-4 h-4 text-blue-600 mt-0.5" />
                   <div>
                     <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Secure Access</p>
-                    <p className="text-[11px] text-slate-500 font-medium">Default student password is <span className="font-bold text-blue-600 underline">123123</span>. Please change it after login.</p>
+                    <p className="text-[11px] text-slate-500 font-medium">Default student password is <span className="font-bold text-blue-600 underline">123</span>. Please change it after login.</p>
                   </div>
                </div>
             </div>
