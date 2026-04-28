@@ -36,8 +36,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let unsubSnapshot: (() => void) | null = null;
 
-    const unsubAuth = onAuthStateChanged(auth, async (fUser) => {
+    const unsubAuth = onAuthStateChanged(auth, (fUser) => {
       setFirebaseUser(fUser);
+      
+      // Cleanup previous listener if it exists
+      if (unsubSnapshot) {
+        unsubSnapshot();
+        unsubSnapshot = null;
+      }
       
       if (fUser) {
         // Listen to User Document for real-time session monitoring
@@ -46,7 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const data = snapshot.data() as AppUser;
             
             // Single Device Logic: If activeSessionId exists and differs from currentLocalSessionId
-            if (data.role === 'student' && data.activeSessionId && data.activeSessionId !== currentLocalSessionId) {
+            // Ensure the update did not just originate from this device
+            if (data.role === 'student' && data.activeSessionId && data.activeSessionId !== currentLocalSessionId && !snapshot.metadata.hasPendingWrites) {
               await auth.signOut();
               Swal.fire({
                 title: 'Session Ended',
@@ -75,7 +82,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false);
         });
       } else {
-        if (unsubSnapshot) unsubSnapshot();
         setUser(null);
         setLoading(false);
       }
