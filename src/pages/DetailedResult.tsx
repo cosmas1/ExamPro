@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { 
   LayoutGrid, Minus, X
@@ -6,6 +6,8 @@ import {
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip
 } from 'recharts';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import StudentLayout from '../components/StudentLayout';
 import { cn } from '../lib/utils';
 
@@ -13,49 +15,67 @@ const COLORS = ['#00a65a', '#dd4b39']; // Green for Correct, Red for Incorrect
 
 export default function DetailedResult() {
   const { submissionId } = useParams();
+  const [loading, setLoading] = useState(true);
+  const [submission, setSubmission] = useState<any>(null);
 
-  // Mock data representing the charts in the user's screenshots
+  useEffect(() => {
+    async function loadData() {
+      if (!submissionId) return;
+      try {
+        const snap = await getDoc(doc(db, 'submissions', submissionId));
+        if (snap.exists()) {
+          setSubmission(snap.data());
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [submissionId]);
+
+  if (loading) return <StudentLayout activeMenu="All Results"><div className="p-10 text-center font-mono text-sm">ANALYZING_DATA...</div></StudentLayout>;
+  if (!submission) return <StudentLayout activeMenu="All Results"><div className="p-10 text-center font-mono text-sm">SUBMISSION_NOT_FOUND</div></StudentLayout>;
+
+  // Data processing
+  const correctCount = submission.answers?.filter((a: any) => a.isCorrect).length || 0;
+  const totalQuestions = submission.answers?.length || 0;
+  const incorrectCount = totalQuestions - correctCount;
+
   const donutData = [
-    { name: 'Correct', value: 8 },
-    { name: 'Incorrect', value: 2 },
+    { name: 'Correct', value: correctCount },
+    { name: 'Incorrect', value: incorrectCount },
   ];
 
-  const timeData = [
-    { name: 'Q1', time: 0.5 },
-    { name: 'Q2', time: 10 },
-    { name: 'Q3', time: 3 },
-    { name: 'Q4', time: 2 },
-    { name: 'Q5', time: 2 },
-    { name: 'Q6', time: 4 },
-    { name: 'Q7', time: 5 },
-    { name: 'Q8', time: 4 },
-    { name: 'Q9', time: 3 },
-    { name: 'Q10', time: 1 },
-  ];
+  const timeData = (submission.answers || []).map((a: any, idx: number) => ({
+    name: `Q${idx + 1}`,
+    time: a.timeSpentSeconds ? Math.round(a.timeSpentSeconds / 6) / 10 : 0 // in decimal minutes roughly for chart
+  }));
 
   const overviewRows = [
-    { label: 'Paper Name', value: 'Quarterly Assessment - Term 1' },
-    { label: 'Paper Category', value: 'Standard Assessment (Automated)' },
-    { label: 'Paper Start Date', value: '23/04/2020' },
-    { label: 'Paper End Date', value: '24/04/2020' },
-    { label: 'Paper Attempt Date', value: '23/04/2020' },
-    { label: 'Total Questions in Paper', value: '10' },
-    { label: 'Marks For Correct Answer', value: '10' },
+    { label: 'Paper Name', value: submission.paperTitle || 'N/A' },
+    { label: 'Attempt Date', value: submission.completedAt?.toDate().toLocaleDateString() || 'N/A' },
+    { label: 'Total Questions in Paper', value: totalQuestions.toString() },
+    { label: 'Marks For Correct Answer', value: '1' },
     { label: 'Marks For InCorrect Answer', value: '0' },
   ];
 
+  const percentage = Math.round((submission.score / submission.totalPossibleScore) * 100);
+  const status = percentage >= 50 ? 'Pass' : 'Fail';
+
   const highlightRows = [
-    { label: 'Result Status', value: 'Pass', color: 'text-green-600' },
-    { label: 'Your Marks / Total Marks', value: '80/100', color: 'text-slate-700' },
-    { label: 'Percentage Obtained', value: '80%', color: 'text-slate-700' },
+    { label: 'Result Status', value: status, color: status === 'Pass' ? 'text-green-600' : 'text-red-600' },
+    { label: 'Your Marks / Total Marks', value: `${submission.score}/${submission.totalPossibleScore}`, color: 'text-slate-700' },
+    { label: 'Percentage Obtained', value: `${percentage}%`, color: 'text-slate-700' },
   ];
 
   const statTableRows = [
-    { label: 'Total Questions', value: '10' },
-    { label: 'Total Questions Attempt', value: '10' },
-    { label: 'Total Questions Unattempt', value: '0', highlight: true },
-    { label: 'Total Correct Answers', value: '8' },
-    { label: 'Total InCorrect Answers', value: '2' },
+    { label: 'Total Questions', value: totalQuestions.toString() },
+    { label: 'Total Questions Attempt', value: totalQuestions.toString() },
+    { label: 'Total Questions Unattempt', value: '0', highlight: false },
+    { label: 'Total Correct Answers', value: correctCount.toString() },
+    { label: 'Total InCorrect Answers', value: incorrectCount.toString() },
   ];
 
   return (

@@ -64,25 +64,25 @@ function AppRoutes() {
       <Route path="/exam/:examId" element={<ProtectedRoute role="student"><ExamInterface /></ProtectedRoute>} />
       <Route path="/result/:submissionId" element={<ProtectedRoute role="student"><ResultAnalysis /></ProtectedRoute>} />
       
-      {/* Admin/Teacher Routes */}
-      <Route path="/admin" element={<ProtectedRoute role={['admin', 'teacher']}><AdminDashboard /></ProtectedRoute>} />
-      <Route path="/admin/documentation" element={<ProtectedRoute role={['admin', 'teacher']}><Documentation /></ProtectedRoute>} />
-      <Route path="/admin/questions" element={<ProtectedRoute role={['admin', 'teacher']}><QuestionList /></ProtectedRoute>} />
-      <Route path="/admin/questions/new" element={<ProtectedRoute role={['admin', 'teacher']}><AddQuestion /></ProtectedRoute>} />
-      <Route path="/admin/papers" element={<ProtectedRoute role={['admin', 'teacher']}><PaperList /></ProtectedRoute>} />
-      <Route path="/admin/papers/new" element={<ProtectedRoute role={['admin', 'teacher']}><AddPaper /></ProtectedRoute>} />
-      <Route path="/admin/papers/upload" element={<ProtectedRoute role={['admin', 'teacher']}><UploadQuestions /></ProtectedRoute>} />
-      <Route path="/admin/papers/results/:examId" element={<ProtectedRoute role={['admin', 'teacher']}><ExamResults /></ProtectedRoute>} />
-      <Route path="/admin/notifications" element={<ProtectedRoute role={['admin', 'teacher']}><Notifications /></ProtectedRoute>} />
-      <Route path="/admin/sessions" element={<ProtectedRoute role={['admin', 'teacher']}><Sessions /></ProtectedRoute>} />
-      <Route path="/admin/users" element={<ProtectedRoute role={['admin', 'teacher']}><UserList /></ProtectedRoute>} />
-      <Route path="/admin/users/new" element={<ProtectedRoute role={['admin', 'teacher']}><AddUser /></ProtectedRoute>} />
-      <Route path="/admin/users/bulk" element={<ProtectedRoute role={['admin', 'teacher']}><BulkUploadUsers /></ProtectedRoute>} />
-      <Route path="/admin/categories" element={<ProtectedRoute role={['admin', 'teacher']}><Categories /></ProtectedRoute>} />
-      <Route path="/admin/questions/bulk" element={<ProtectedRoute role={['admin', 'teacher']}><BulkQuestionUpload /></ProtectedRoute>} />
-      <Route path="/admin/questions/direct" element={<ProtectedRoute role={['admin', 'teacher']}><DirectAddQuestion /></ProtectedRoute>} />
-      <Route path="/admin/exam/new" element={<ProtectedRoute role={['admin', 'teacher']}><ExamEditor /></ProtectedRoute>} />
-      <Route path="/admin/exam/:examId" element={<ProtectedRoute role={['admin', 'teacher']}><ExamEditor /></ProtectedRoute>} />
+      {/* Admin/Teacher/Staff Routes */}
+      <Route path="/admin" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><AdminDashboard /></ProtectedRoute>} />
+      <Route path="/admin/documentation" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><Documentation /></ProtectedRoute>} />
+      <Route path="/admin/questions" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><QuestionList /></ProtectedRoute>} />
+      <Route path="/admin/questions/new" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><AddQuestion /></ProtectedRoute>} />
+      <Route path="/admin/papers" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><PaperList /></ProtectedRoute>} />
+      <Route path="/admin/papers/new" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><AddPaper /></ProtectedRoute>} />
+      <Route path="/admin/papers/upload" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><UploadQuestions /></ProtectedRoute>} />
+      <Route path="/admin/papers/results/:examId" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><ExamResults /></ProtectedRoute>} />
+      <Route path="/admin/notifications" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><Notifications /></ProtectedRoute>} />
+      <Route path="/admin/sessions" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><Sessions /></ProtectedRoute>} />
+      <Route path="/admin/users" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><UserList /></ProtectedRoute>} />
+      <Route path="/admin/users/new" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><AddUser /></ProtectedRoute>} />
+      <Route path="/admin/users/bulk" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><BulkUploadUsers /></ProtectedRoute>} />
+      <Route path="/admin/categories" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><Categories /></ProtectedRoute>} />
+      <Route path="/admin/questions/bulk" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><BulkQuestionUpload /></ProtectedRoute>} />
+      <Route path="/admin/questions/direct" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><DirectAddQuestion /></ProtectedRoute>} />
+      <Route path="/admin/exam/new" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><ExamEditor /></ProtectedRoute>} />
+      <Route path="/admin/exam/:examId" element={<ProtectedRoute role={['admin', 'teacher', 'staff']}><ExamEditor /></ProtectedRoute>} />
       
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

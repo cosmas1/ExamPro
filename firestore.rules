@@ -15,21 +15,27 @@ service cloud.firestore {
     }
     
     function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(userPath) ? get(userPath).data : {};
     }
     
     function isStaff() {
+      let userData = getUserData();
+      let role = userData.get('role', 'student');
       return isSignedIn() && (
-        getUserData().role == 'admin' || 
-        getUserData().role == 'teacher' || 
-        request.auth.token.email == 'musaukulenga1@gmail.com'
+        request.auth.token.email == 'musaukulenga1@gmail.com' || 
+        role == 'admin' || 
+        role == 'teacher' ||
+        role == 'staff'
       );
     }
 
     function isAdmin() {
+      let userData = getUserData();
+      let role = userData.get('role', 'student');
       return isSignedIn() && (
-        getUserData().role == 'admin' || 
-        request.auth.token.email == 'musaukulenga1@gmail.com'
+        request.auth.token.email == 'musaukulenga1@gmail.com' || 
+        role == 'admin'
       );
     }
     
@@ -51,7 +57,7 @@ service cloud.firestore {
     
     function isValidUser(data) {
       return data.email is string && 
-             data.role in ['admin', 'teacher', 'student'] &&
+             data.role in ['admin', 'teacher', 'student', 'staff'] &&
              data.keys().hasAll(['email', 'role']);
     }
     
@@ -102,6 +108,14 @@ service cloud.firestore {
         (existing().status == 'published' && existing().sessionId == getUserData().sessionId)
       );
       allow write: if isStaff();
+
+      match /questions/{qId} {
+        allow read: if isSignedIn() && (
+          isStaff() || 
+          get(/databases/$(database)/documents/exams/$(examId)).data.status == 'published'
+        );
+        allow write: if isStaff();
+      }
     }
     
     match /questions/{qId} {

@@ -81,6 +81,7 @@ export default function UserList() {
             <select id="swal-role" class="w-full p-2 border rounded">
               <option value="student" ${u.role === 'student' ? 'selected' : ''}>Student</option>
               <option value="teacher" ${u.role === 'teacher' ? 'selected' : ''}>Teacher</option>
+              <option value="staff" ${u.role === 'staff' ? 'selected' : ''}>Staff</option>
               <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
             </select>
           </div>

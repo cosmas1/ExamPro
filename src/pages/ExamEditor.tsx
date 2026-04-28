@@ -43,8 +43,8 @@ export default function ExamEditor() {
       const examDoc = await getDoc(doc(db, 'exams', examId!));
       if (examDoc.exists()) {
         const data = examDoc.data() as Exam;
-        // Relax check: teachers and admins can edit
-        if (user?.role !== 'admin' && user?.role !== 'teacher' && data.createdBy !== user?.uid) {
+        // Relax check: teachers, admins and staff can edit
+        if (user?.role !== 'admin' && user?.role !== 'teacher' && user?.role !== 'staff' && data.createdBy !== user?.uid) {
           navigate('/admin');
           return;
         }
@@ -133,28 +133,31 @@ export default function ExamEditor() {
     try {
       const batch = writeBatch(db);
       
-      // THIS IS A SIMPLIFIED UPDATE: In a real app, delete old ones or use meaningful IDs
-      // For this demo, we'll clear and rewrite (not ideal for large sets but works for MVP)
       const qSnap = await getDocs(collection(db, 'exams', examId, 'questions'));
       qSnap.docs.forEach(d => batch.delete(d.ref));
       
       questions.forEach((q, idx) => {
         const qRef = doc(collection(db, 'exams', examId, 'questions'));
-        const { id, ...data } = q;
-        batch.set(qRef, { ...data, order: idx });
+        // Sanitize data to avoid undefined fields
+        const sanitizedData: any = {};
+        Object.entries(q).forEach(([key, value]) => {
+          if (value !== undefined && key !== 'id') {
+            sanitizedData[key] = value;
+          }
+        });
+        batch.set(qRef, { ...sanitizedData, order: idx });
       });
       
-      // Update totals in exam doc
       batch.update(doc(db, 'exams', examId), {
         totalQuestions: questions.length,
-        totalMarks: questions.reduce((sum, q) => sum + (Number(q.points) || 1), 0)
+        totalMarks: questions.reduce((sum, q) => sum + (Number(q.points || q.marks) || 1), 0)
       });
 
       await batch.commit();
       Swal.fire('Success', 'All questions saved', 'success');
-    } catch (error) {
-      console.error(error);
-      Swal.fire('Error', 'Failed to save questions', 'error');
+    } catch (error: any) {
+      console.error('Save Error:', error);
+      Swal.fire('Error', `Failed to save questions: ${error.message || error}`, 'error');
     } finally {
       setIsSaving(false);
     }

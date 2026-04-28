@@ -109,10 +109,10 @@ export default function AdminDashboard() {
       <div className="bg-[#ecf0f5] px-4 py-3 flex items-center justify-between shrink-0 shadow-sm border-b border-white text-slate-700">
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-medium tracking-tight">
-            {user?.role === 'teacher' ? 'Teacher Dashboard' : 'System Dashboard'}
+            {(user?.role === 'teacher' || user?.role === 'staff') ? 'Staff Dashboard' : 'System Dashboard'}
           </h2>
           <span className="text-[11px] text-slate-400 mt-2 font-normal">
-            {user?.role === 'teacher' ? 'Your academic overview and exam controls.' : 'Real-time statistics and system overview.'}
+            {(user?.role === 'teacher' || user?.role === 'staff') ? 'Your academic overview and exam controls.' : 'Real-time statistics and system overview.'}
           </span>
         </div>
       </div>

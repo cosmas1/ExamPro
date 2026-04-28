@@ -18,7 +18,7 @@ export default function Landing() {
 
   React.useEffect(() => {
     if (!loading && firebaseUser && user) {
-      if (user.role === 'admin' || user.role === 'teacher') {
+      if (user.role === 'admin' || user.role === 'teacher' || user.role === 'staff') {
         navigate('/admin');
       } else {
         navigate('/dashboard');
@@ -60,7 +60,7 @@ export default function Landing() {
       const role = userDoc.data()?.role || 'student';
       
       Swal.close();
-      navigate(role === 'admin' ? '/admin' : '/dashboard');
+      navigate((role === 'admin' || role === 'teacher' || role === 'staff') ? '/admin' : '/dashboard');
     } catch (error: any) {
       setIsLoggingIn(false);
       Swal.close();
@@ -92,12 +92,10 @@ export default function Landing() {
 
       const fUser = await signInWithEmail(email, password);
       
-      // Get role for redirect using UID (getDoc is allowed for self)
-      const userDoc = await getDoc(doc(db, 'users', fUser.uid));
-      const role = userDoc.data()?.role || 'student';
-
+      // The useAuth hook handles fetching role and redirection automatically
+      // via the useEffect that listens to firebaseUser and user state.
+      // We just need to stop the loading state here.
       Swal.close();
-      navigate(role === 'admin' ? '/admin' : '/dashboard');
     } catch (error: any) {
       setIsLoggingIn(false);
       Swal.fire('Login Error', error.message || 'Invalid credentials', 'error');

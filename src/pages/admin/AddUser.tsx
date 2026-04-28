@@ -78,7 +78,7 @@ export default function AddUser() {
       // 3. Sign out from secondary app to clean up
       await signOut(secondaryAuth);
 
-      Swal.fire('Success', `${formData.role === 'admin' ? 'Admin' : formData.role === 'teacher' ? 'Teacher' : 'Student'} account created. They can now login with ${formData.email} or ${formData.admissionNumber} and password ${formData.password}`, 'success');
+      Swal.fire('Success', `${formData.role === 'admin' ? 'Admin' : formData.role === 'teacher' ? 'Teacher' : formData.role === 'staff' ? 'Staff' : 'Student'} account created. They can now login with ${formData.email} or ${formData.admissionNumber} and password ${formData.password}`, 'success');
       navigate('/admin/users');
     } catch (error: any) {
       Swal.fire('Error', error.message, 'error');
@@ -166,7 +166,8 @@ export default function AddUser() {
                   >
                     <option value="student">Student</option>
                     <option value="teacher">Teacher</option>
-                    <option value="admin">Admin (Staff)</option>
+                    <option value="staff">Staff</option>
+                    <option value="admin">Admin</option>
                   </select>
                 </div>
                 <div>
