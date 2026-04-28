@@ -17,8 +17,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Generate a random session ID for this window
-const currentLocalSessionId = Math.random().toString(36).substring(2, 15);
+// Generate or retrieve a persistent session ID for this browser/device
+const getSessionId = () => {
+  let id = localStorage.getItem('examcore_session_id');
+  if (!id) {
+    id = Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('examcore_session_id', id);
+  }
+  return id;
+};
+const currentLocalSessionId = getSessionId();
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
@@ -120,7 +128,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return result.user;
   };
 
-  const logout = () => auth.signOut();
+  const logout = async () => {
+    localStorage.removeItem('examcore_session_id');
+    await auth.signOut();
+  };
 
   return (
     <AuthContext.Provider value={{ user, firebaseUser, loading, signIn, signInWithGoogle, signInWithEmail, signOut: logout }}>
