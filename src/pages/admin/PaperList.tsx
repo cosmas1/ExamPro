@@ -1,45 +1,67 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  collection, query, onSnapshot, deleteDoc, doc, updateDoc, getDocs 
+  collection, query, onSnapshot, deleteDoc, doc, updateDoc, getDocs, addDoc, writeBatch, serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Exam } from '../../types';
 import AdminLayout from '../../components/AdminLayout';
-import { Edit2, Trash2, Eye, Play, Pause, Search, BarChart3, Clock } from 'lucide-react';
+import { Edit2, Trash2, Play, Pause, Search, BarChart3, Clock, Copy, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import Swal from 'sweetalert2';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function PaperList() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [exams, setExams] = useState<Exam[]>([]);
   const [sessions, setSessions] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    // Fetch Sessions mapping
-    const fetchSessions = async () => {
-      try {
-        const snap = await getDocs(collection(db, 'sessions'));
-        const mapping: Record<string, string> = {};
-        snap.docs.forEach(doc => mapping[doc.id] = doc.data().name);
-        setSessions(mapping);
-      } catch (e) { console.error(e); }
-    };
-    fetchSessions();
-
-    const q = query(collection(db, 'exams'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setExams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Exam)));
-      setLoading(false);
-    }, (error) => {
-      console.error("Exams snapshot error:", error);
-      setLoading(false);
+  const handleEditSession = async (exam: Exam) => {
+    const sessionOptions = Object.entries(sessions).map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+    const { value: sessionId } = await Swal.fire({
+      title: 'Assign to Session',
+      input: 'select',
+      inputOptions: { ...sessions, 'global': 'Global' },
+      inputValue: exam.sessionId || 'global',
+      showCancelButton: true
     });
-    return () => unsubscribe();
-  }, []);
+    if (sessionId) {
+      await updateDoc(doc(db, 'exams', exam.id), { sessionId: sessionId === 'global' ? null : sessionId });
+      Swal.fire('Updated', 'Paper session updated', 'success');
+    }
+  };
+
+  const handleDuplicate = async (exam: Exam) => {
+    const { value: formValues } = await Swal.fire({
+      title: 'Duplicate Paper',
+      html: `
+        <input id="swal-title" class="swal2-input" placeholder="New Title" value="${exam.title} (Copy)">
+      `,
+      preConfirm: () => {
+         return (document.getElementById('swal-title') as HTMLInputElement).value;
+      }
+    });
+
+    if (formValues) {
+        const batch = writeBatch(db);
+        const newExamRef = doc(collection(db, 'exams'));
+        const { id, ...examData } = exam;
+        batch.set(newExamRef, { ...examData, title: formValues, createdAt: serverTimestamp() });
+        
+        const questionsSnap = await getDocs(collection(db, 'exams', exam.id, 'questions'));
+        questionsSnap.docs.forEach(qDoc => {
+            const newQRef = doc(collection(newExamRef, 'questions'));
+            batch.set(newQRef, qDoc.data());
+        });
+        
+        await batch.commit();
+        Swal.fire('Duplicated', 'Paper duplicated successfully', 'success');
+    }
+  };
 
   const handleEditTime = async (exam: Exam) => {
     const { value: formValues } = await Swal.fire({

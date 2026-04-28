@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
@@ -33,51 +33,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let unsubSnapshot: (() => void) | null = null;
+  const unsubSnapshot = useRef<(() => void) | null>(null);
 
+  useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (fUser) => {
       setFirebaseUser(fUser);
       
-      // Cleanup previous listener if it exists
-      if (unsubSnapshot) {
-        unsubSnapshot();
-        unsubSnapshot = null;
+      // Cleanup previous listener
+      if (unsubSnapshot.current) {
+        unsubSnapshot.current();
+        unsubSnapshot.current = null;
       }
       
       if (fUser) {
         // Listen to User Document for real-time session monitoring
-        unsubSnapshot = onSnapshot(doc(db, 'users', fUser.uid), async (snapshot) => {
-          if (snapshot.exists()) {
-            const data = snapshot.data() as AppUser;
+        unsubSnapshot.current = onSnapshot(doc(db, 'users', fUser.uid), async (snapshot) => {
+          if (!snapshot.exists()) {
+             setUser(null);
+             setLoading(false);
+             return;
+          }
+          
+          const data = snapshot.data() as AppUser;
             
-            // Single Device Logic: If activeSessionId exists and differs from currentLocalSessionId
-            // Ensure the update did not just originate from this device
-            if (data.role === 'student' && data.activeSessionId && data.activeSessionId !== currentLocalSessionId && !snapshot.metadata.hasPendingWrites) {
-              await auth.signOut();
-              Swal.fire({
-                title: 'Session Ended',
-                text: 'You have been logged out because you signed in from another device.',
-                icon: 'warning',
-                confirmButtonColor: '#3c8dbc'
-              });
-              return;
-            }
+          // Single Device Logic: If activeSessionId exists and differs from currentLocalSessionId
+          // Ensure the update did not just originate from this device
+          if (data.role === 'student' && data.activeSessionId && data.activeSessionId !== currentLocalSessionId && !snapshot.metadata.hasPendingWrites) {
+            await auth.signOut();
+            Swal.fire({
+              title: 'Session Ended',
+              text: 'You have been logged out because you signed in from another device.',
+              icon: 'warning',
+              confirmButtonColor: '#3c8dbc'
+            });
+            return;
+          }
 
-            const verifiedUser = { ...data, uid: fUser.uid };
+          const verifiedUser = { ...data, uid: fUser.uid };
 
-            // Force admin role for the project owner's email
-            if (fUser.email === 'musaukulenga1@gmail.com' && data.role !== 'admin') {
-              await updateDoc(doc(db, 'users', fUser.uid), { role: 'admin' });
-              setUser({ ...verifiedUser, role: 'admin' });
-            } else {
-              setUser(verifiedUser);
-            }
+          // Force admin role for the project owner's email
+          if (fUser.email === 'musaukulenga1@gmail.com' && data.role !== 'admin') {
+            await updateDoc(doc(db, 'users', fUser.uid), { role: 'admin' });
+            setUser({ ...verifiedUser, role: 'admin' });
           } else {
-            setUser(null);
+            setUser(verifiedUser);
           }
           setLoading(false);
         }, (error) => {
+          // If the error is permission-denied, it might be due to a race condition on signout,
+          // so we can often ignore it if the user is currently null
+          if (error.code === 'permission-denied' && !auth.currentUser) {
+            console.warn("Permission denied while signing out, ignoring.");
+            return;
+          }
           console.error("User doc snapshot error:", error);
           setLoading(false);
         });
@@ -89,13 +97,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       unsubAuth();
-      if (unsubSnapshot) unsubSnapshot();
+      if (unsubSnapshot.current) unsubSnapshot.current();
     };
   }, []);
 
   const signIn = async (fUser: User) => {
-    const userDocRef = doc(db, 'users', fUser.uid);
-    const userDoc = await getDoc(userDocRef);
+    let userDocRef = doc(db, 'users', fUser.uid);
+    let userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists() && fUser.email) {
+      const { query, collection, where, getDocs } = await import('firebase/firestore');
+      const q = query(collection(db, 'users'), where('email', '==', fUser.email.toLowerCase()));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        userDocRef = querySnapshot.docs[0].ref;
+        userDoc = querySnapshot.docs[0];
+      }
+    }
     
     const sessionUpdate = {
       activeSessionId: currentLocalSessionId,
@@ -106,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const isAdmin = fUser.email === 'musaukulenga1@gmail.com';
       const newUser: AppUser = {
         uid: fUser.uid,
-        name: fUser.displayName || 'Anonymous',
+        name: fUser.displayName || fUser.email?.split('@')[0] || 'Anonymous',
         email: fUser.email || '',
         role: isAdmin ? 'admin' : 'student',
         createdAt: new Date().toISOString(),
