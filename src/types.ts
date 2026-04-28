@@ -30,6 +30,7 @@ export interface Exam {
   startTime?: string;
   endTime?: string;
   settings?: any;
+  allowedExits?: number;
 }
 
 export interface Paper {

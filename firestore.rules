@@ -85,6 +85,7 @@ service cloud.firestore {
 
     match /admission_to_email/{admissionId} {
       allow get: if true;
+      allow list, write: if isStaff();
     }
     
     match /sessions/{sessionId} {

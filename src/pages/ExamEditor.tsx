@@ -19,6 +19,7 @@ export default function ExamEditor() {
     title: '',
     description: '',
     durationMinutes: 60,
+    allowedExits: 3,
     status: 'draft',
     totalMarks: 0,
     totalQuestions: 0,
@@ -283,6 +284,18 @@ export default function ExamEditor() {
                     <Clock className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 w-5 h-5" />
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-black text-slate-700 uppercase tracking-widest mb-2">Allowed Fullscreen Exits</label>
+                  <input 
+                    type="number"
+                    value={exam.allowedExits}
+                    onChange={e => setExam({...exam, allowedExits: Number(e.target.value)})}
+                    className="w-full bg-slate-50 rounded-2xl border-slate-100 focus:border-indigo-600 p-4 font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-8">
                 <div>
                   <label className="block text-sm font-black text-slate-700 uppercase tracking-widest mb-2">Status</label>
                   <select 

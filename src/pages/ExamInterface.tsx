@@ -24,6 +24,7 @@ export default function ExamInterface() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [exitCount, setExitCount] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const initialLoadRef = useRef(false);
@@ -50,7 +51,18 @@ export default function ExamInterface() {
     };
 
     const handleFullScreenChange = () => {
-      setIsFullScreen(!!document.fullscreenElement);
+      const isNowFS = !!document.fullscreenElement;
+      setIsFullScreen(isNowFS);
+      if (!isNowFS && exam) {
+        const newCount = exitCount + 1;
+        setExitCount(newCount);
+        if (newCount >= (exam.allowedExits || 3)) {
+             Swal.fire('Exam Ended', 'You have exceeded the allowed number of exits. Your exam is submitted.', 'error');
+             submitExam(answers, questions, exam.totalMarks);
+        } else {
+             Swal.fire('Warning', `You have exited fullscreen. Exit ${newCount} of ${exam.allowedExits || 3}. Please re-enter fullscreen immediately.`, 'warning');
+        }
+      }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -60,7 +72,7 @@ export default function ExamInterface() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('fullscreenchange', handleFullScreenChange);
     };
-  }, [examId, user]);
+  }, [examId, user, exam, exitCount, answers, questions]);
 
   // Webcam setup if proctored
   useEffect(() => {
