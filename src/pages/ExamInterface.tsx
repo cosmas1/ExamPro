@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, getDocs, collection, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, setDoc, updateDoc, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Exam, Question, Submission } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -26,6 +26,8 @@ export default function ExamInterface() {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [exitCount, setExitCount] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const jitsiContainerRef = useRef<HTMLDivElement>(null);
+  const apiRef = useRef<any>(null);
 
   const initialLoadRef = useRef(false);
 
@@ -33,6 +35,42 @@ export default function ExamInterface() {
   const exitCountRef = useRef(exitCount);
   const answersRef = useRef(answers);
   const questionsRef = useRef(questions);
+
+  // Initialize Jitsi
+  useEffect(() => {
+    if (!examId || !user) return;
+    
+    // Load Jitsi script
+    const script = document.createElement('script');
+    script.src = 'https://meet.jit.si/external_api.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      const roomName = `exam-${examId}-student-${user.uid}`;
+      const api = new (window as any).JitsiMeetExternalAPI('meet.jit.si', {
+        roomName: roomName,
+        parentNode: jitsiContainerRef.current,
+        width: '100%',
+        height: '100%',
+        configOverwrite: {
+            startWithAudioMuted: false, // Maybe we want audio? Or false? Let's check.
+            startWithVideoMuted: false,
+        },
+        interfaceConfigOverwrite: {
+            DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+        }
+      });
+      api.executeCommand('subject', 'Proctoring');
+      api.executeCommand('displayName', user.name);
+      apiRef.current = api;
+    };
+
+    return () => {
+      if (apiRef.current) apiRef.current.dispose();
+      document.body.removeChild(script);
+    };
+  }, [examId, user]);
 
   useEffect(() => {
     examRef.current = exam;
@@ -50,6 +88,12 @@ export default function ExamInterface() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         setTabSwitchCount(prev => prev + 1);
+        addDoc(collection(db, 'incidents'), {
+          studentId: user?.uid,
+          examId: examId,
+          type: 'tab_switch',
+          timestamp: serverTimestamp()
+        });
         Swal.fire({
           title: 'Warning!',
           text: 'Tab switching is detected and logged for proctoring.',
@@ -72,6 +116,13 @@ export default function ExamInterface() {
       if (!isNowFS && currentExam) {
         const newCount = currentExitCount + 1;
         setExitCount(newCount);
+        addDoc(collection(db, 'incidents'), {
+          studentId: user?.uid,
+          examId: examId,
+          type: 'exit_fullscreen',
+          timestamp: serverTimestamp()
+        });
+        
         if (newCount >= (currentExam.allowedExits || 3)) {
              Swal.fire('Exam Ended', 'You have exceeded the allowed number of exits. Your exam is submitted.', 'error');
              submitExam(answersRef.current, questionsRef.current, currentExam.totalMarks);
@@ -336,6 +387,12 @@ export default function ExamInterface() {
                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Security Environment Active</p>
              </div>
           </div>
+          {(exitCount + tabSwitchCount) >= ((exam?.allowedExits || 3) - 1) && (
+              <div className="flex items-center gap-2 text-red-600 bg-red-100 px-3 py-1 rounded font-bold text-xs animate-pulse">
+                <AlertTriangle size={16}/>
+                <span>High Incident Risk</span>
+              </div>
+          )}
         </div>
 
         <div className={cn(
@@ -354,7 +411,8 @@ export default function ExamInterface() {
           {exam?.settings?.proctored === 'Yes' && (
             <div className="fixed bottom-24 right-8 w-48 h-36 bg-black rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 group">
                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale brightness-110" />
-               <div className="absolute top-2 right-2 flex gap-1">
+               <div ref={jitsiContainerRef} className="absolute inset-0 z-10" />
+               <div className="absolute top-2 right-2 flex gap-1 z-20">
                   <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
                   <span className="text-[8px] font-bold text-white uppercase tracking-tighter opacity-70">REC</span>
                </div>

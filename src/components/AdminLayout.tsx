@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Plus, Users, LayoutGrid, HelpCircle, BookOpen, FileText,
   Bell, Settings, LogOut, ChevronRight, Share2, Globe, List, Menu,
-  AlertCircle
+  AlertCircle, Monitor
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { cn } from '../lib/utils';
@@ -77,6 +77,7 @@ export default function AdminLayout({ children, activeMenu, activeSubMenu }: Adm
     { label: 'Sessions', icon: Share2, action: () => navigate('/admin/sessions'), active: location.pathname === '/admin/sessions' },
     { label: 'Categories', icon: BookOpen, action: () => navigate('/admin/categories'), active: location.pathname === '/admin/categories' },
     { label: 'Notifications', icon: Bell, action: () => navigate('/admin/notifications') },
+    { label: 'Monitoring', icon: Monitor, action: () => navigate('/admin/monitoring'), active: location.pathname === '/admin/monitoring' },
     { label: 'Profile', icon: Settings, action: () => Swal.fire('Coming Soon', 'Admin profile editing is coming soon.', 'info') },
     { label: 'Log out', icon: LogOut, action: () => auth.signOut() },
   ];
