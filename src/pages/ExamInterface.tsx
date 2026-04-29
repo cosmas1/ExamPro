@@ -28,6 +28,36 @@ export default function ExamInterface() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const jitsiContainerRef = useRef<HTMLDivElement>(null);
   const apiRef = useRef<any>(null);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    setPosition({ x: window.innerWidth - 240, y: window.innerHeight - 200 });
+  }, []);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragOffset.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        setPosition({ x: e.clientX - dragOffset.current.x, y: e.clientY - dragOffset.current.y });
+      }
+    };
+    const handleMouseUp = () => setIsDragging(false);
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   const initialLoadRef = useRef(false);
 
@@ -409,16 +439,26 @@ export default function ExamInterface() {
         <div className="flex-1 overflow-y-auto p-12 relative">
           {/* Webcam Feed Overlay */}
           {exam?.settings?.proctored === 'Yes' && (
-            <div className="fixed bottom-24 right-8 w-48 h-36 bg-black rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 group">
-               <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale brightness-110" />
-               <div ref={jitsiContainerRef} className="absolute inset-0 z-10" />
-               <div className="absolute top-2 right-2 flex gap-1 z-20">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-                  <span className="text-[8px] font-bold text-white uppercase tracking-tighter opacity-70">REC</span>
+            <div 
+                className={cn(
+                    "fixed bg-black rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20 z-20 group transition-all",
+                    isMinimized ? "w-32 h-16" : "w-48 h-36"
+                )}
+                style={{ left: `${position.x}px`, top: `${position.y}px` }}
+            >
+               <div className="h-6 bg-slate-900 cursor-move flex items-center justify-between px-2" onMouseDown={handleMouseDown}>
+                    <span className="text-[8px] font-bold text-white uppercase tracking-tighter opacity-70">PROCTORING</span>
+                    <button onClick={() => setIsMinimized(!isMinimized)} className="text-white hover:text-indigo-300">
+                        {isMinimized ? '+' : '-'}
+                    </button>
                </div>
-               <div className="absolute inset-0 bg-indigo-500/10 mix-blend-overlay pointer-events-none" />
-               <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
-                  <p className="text-[10px] text-white font-mono opacity-80 truncate">{user?.name}</p>
+               <div className={cn("relative w-full h-[calc(100%-1.5rem)]", isMinimized ? "hidden" : "block")}>
+                   <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale brightness-110" />
+                   <div ref={jitsiContainerRef} className="absolute inset-0 z-10" />
+                   <div className="absolute top-2 right-2 flex gap-1 z-20">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                   </div>
+                   <div className="absolute inset-0 bg-indigo-500/10 mix-blend-overlay pointer-events-none" />
                </div>
             </div>
           )}
