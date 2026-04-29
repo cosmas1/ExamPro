@@ -1,13 +1,53 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, getDocs, collection, setDoc, updateDoc, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { Exam, Question, Submission } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { Clock, ChevronLeft, ChevronRight, Send, AlertTriangle, Monitor, LayoutGrid, CheckCircle2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { differenceInSeconds } from 'date-fns';
 import Swal from 'sweetalert2';
+
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 export default function ExamInterface() {
   const { examId } = useParams();
@@ -136,6 +176,15 @@ export default function ExamInterface() {
       }
     };
 
+    const handleBlur = () => {
+        addDoc(collection(db, 'incidents'), {
+          studentId: user?.uid,
+          examId: examId,
+          type: 'window_blur',
+          timestamp: serverTimestamp()
+        });
+    };
+
     const handleFullScreenChange = () => {
       // Check for standard or webkit (Safari) fullscreen
       const isNowFS = !!document.fullscreenElement || !!(document as any).webkitFullscreenElement;
@@ -163,10 +212,12 @@ export default function ExamInterface() {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
     document.addEventListener('fullscreenchange', handleFullScreenChange);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
       document.removeEventListener('fullscreenchange', handleFullScreenChange);
     };
   }, [examId, user]);
@@ -370,7 +421,8 @@ export default function ExamInterface() {
         navigate(`/result/${submission!.id}`);
       });
     } catch (error) {
-      console.error(error);
+      console.error("Full Error Details:", error);
+      handleFirestoreError(error, OperationType.UPDATE, `submissions/${submission!.id}`);
       setIsSubmitting(false);
       Swal.fire('Error', 'Submission failed. Please check internet connection.', 'error');
     }

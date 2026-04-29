@@ -125,9 +125,9 @@ service cloud.firestore {
     }
     
     match /submissions/{subId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isStaff());
-      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
-      allow update: if isSignedIn() && (existing().userId == request.auth.uid || isStaff());
+      allow read: if isSignedIn() && (resource.data.studentId == request.auth.uid || isStaff());
+      allow create: if isSignedIn() && incoming().studentId == request.auth.uid;
+      allow update: if isSignedIn() && (existing().studentId == request.auth.uid || isStaff());
       allow delete: if isAdmin();
     }
   }
