@@ -63,7 +63,8 @@ export default function ExamInterface() {
     };
 
     const handleFullScreenChange = () => {
-      const isNowFS = !!document.fullscreenElement;
+      // Check for standard or webkit (Safari) fullscreen
+      const isNowFS = !!document.fullscreenElement || !!(document as any).webkitFullscreenElement;
       setIsFullScreen(isNowFS);
       const currentExam = examRef.current;
       const currentExitCount = exitCountRef.current;
@@ -108,9 +109,14 @@ export default function ExamInterface() {
   }, [exam]);
 
   const enterFullScreen = () => {
-    document.documentElement.requestFullscreen().catch(e => {
-      console.error(`Error attempting to enable fullscreen: ${e.message}`);
-    });
+    const el = document.documentElement;
+    if (el.requestFullscreen) {
+        el.requestFullscreen().catch(e => {
+            console.error(`Error attempting to enable fullscreen: ${e.message}`);
+        });
+    } else if ((el as any).webkitRequestFullscreen) {
+        (el as any).webkitRequestFullscreen();
+    }
   };
 
   const startOrResumeExam = async () => {

@@ -20,6 +20,29 @@ export default function PaperList() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
+  useEffect(() => {
+    // Fetch Sessions mapping
+    const fetchSessions = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'sessions'));
+        const mapping: Record<string, string> = {};
+        snap.docs.forEach(doc => mapping[doc.id] = doc.data().name);
+        setSessions(mapping);
+      } catch (e) { console.error(e); }
+    };
+    fetchSessions();
+
+    const q = query(collection(db, 'exams'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setExams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Exam)));
+      setLoading(false);
+    }, (error) => {
+      console.error("Exams snapshot error:", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const handleEditSession = async (exam: Exam) => {
     const sessionOptions = Object.entries(sessions).map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
     const { value: sessionId } = await Swal.fire({
