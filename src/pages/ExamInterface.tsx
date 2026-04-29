@@ -29,6 +29,18 @@ export default function ExamInterface() {
 
   const initialLoadRef = useRef(false);
 
+  const examRef = useRef(exam);
+  const exitCountRef = useRef(exitCount);
+  const answersRef = useRef(answers);
+  const questionsRef = useRef(questions);
+
+  useEffect(() => {
+    examRef.current = exam;
+    exitCountRef.current = exitCount;
+    answersRef.current = answers;
+    questionsRef.current = questions;
+  }, [exam, exitCount, answers, questions]);
+
   useEffect(() => {
     if (!examId || !user || initialLoadRef.current) return;
     initialLoadRef.current = true;
@@ -53,14 +65,17 @@ export default function ExamInterface() {
     const handleFullScreenChange = () => {
       const isNowFS = !!document.fullscreenElement;
       setIsFullScreen(isNowFS);
-      if (!isNowFS && exam) {
-        const newCount = exitCount + 1;
+      const currentExam = examRef.current;
+      const currentExitCount = exitCountRef.current;
+      
+      if (!isNowFS && currentExam) {
+        const newCount = currentExitCount + 1;
         setExitCount(newCount);
-        if (newCount >= (exam.allowedExits || 3)) {
+        if (newCount >= (currentExam.allowedExits || 3)) {
              Swal.fire('Exam Ended', 'You have exceeded the allowed number of exits. Your exam is submitted.', 'error');
-             submitExam(answers, questions, exam.totalMarks);
+             submitExam(answersRef.current, questionsRef.current, currentExam.totalMarks);
         } else {
-             Swal.fire('Warning', `You have exited fullscreen. Exit ${newCount} of ${exam.allowedExits || 3}. Please re-enter fullscreen immediately.`, 'warning');
+             Swal.fire('Warning', `You have exited fullscreen. Exit ${newCount} of ${currentExam.allowedExits || 3}. Please re-enter fullscreen immediately.`, 'warning');
         }
       }
     };
@@ -72,7 +87,7 @@ export default function ExamInterface() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('fullscreenchange', handleFullScreenChange);
     };
-  }, [examId, user, exam, exitCount, answers, questions]);
+  }, [examId, user]);
 
   // Webcam setup if proctored
   useEffect(() => {

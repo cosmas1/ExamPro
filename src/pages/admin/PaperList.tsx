@@ -248,12 +248,26 @@ export default function PaperList() {
                       <td className="px-6 py-4">
                         <div className="flex justify-center gap-2">
                           <button 
-                            onClick={() => handleEditTime(exam)}
-                            className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded shadow-sm transition-all active:scale-95"
-                            title="Edit Exam Timing"
-                          >
-                            <Clock className="w-3 h-3" />
-                          </button>
+                             onClick={() => handleDuplicate(exam)}
+                             className="bg-purple-600 hover:bg-purple-700 text-white p-2 rounded shadow-sm transition-all active:scale-95"
+                             title="Duplicate Paper"
+                           >
+                             <Copy className="w-3 h-3" />
+                           </button>
+                           <button 
+                             onClick={() => handleEditSession(exam)}
+                             className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded shadow-sm transition-all active:scale-95"
+                             title="Edit Session"
+                           >
+                             <Settings className="w-3 h-3" />
+                           </button>
+                           <button 
+                             onClick={() => handleEditTime(exam)}
+                             className="bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded shadow-sm transition-all active:scale-95"
+                             title="Edit Exam Timing"
+                           >
+                             <Clock className="w-3 h-3" />
+                           </button>
                           {exam.status === 'published' && (
                              <button 
                                onClick={() => toggleLive(exam)}
